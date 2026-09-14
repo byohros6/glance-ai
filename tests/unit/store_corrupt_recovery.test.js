@@ -61,12 +61,15 @@ suite.test('Store can cleanly save and self-heal after corruption', () => {
 });
 
 app.whenReady().then(async () => {
+  let success = false;
   try {
-    const success = await suite.run();
-    process.exit(success ? 0 : 1);
+    success = await suite.run();
   } finally {
     if (backupData) {
-      fs.writeFileSync(settingsPath, backupData, 'utf-8');
+      try {
+        fs.writeFileSync(settingsPath, backupData, 'utf-8');
+      } catch (e) {}
     }
   }
+  process.exit(success ? 0 : 1);
 });
