@@ -1,0 +1,395 @@
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { store } from '../../src/main/store.js';
+import { createTestSuite, assert } from '../helpers/test_suite.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const suite = createTestSuite('Milestone 2 Injection Challenger: Adversarial DOM Injection & Submit Engine');
+
+let win = null;
+
+const samplePngDataUrl =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+suite.test('Standalone injected.js: Arms, suppresses native dialog, injects File, and auto-restores', async () => {
+  ipcMain.removeHandler('get-focusable');
+  ipcMain.removeHandler('get-click-through');
+  ipcMain.removeHandler('get-settings');
+
+  ipcMain.handle('get-focusable', () => true);
+  ipcMain.handle('get-click-through', () => false);
+  ipcMain.handle('get-settings', () => store.getAll());
+
+  win = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    }
+  });
+
+  const fixturePath = path.join(__dirname, '../fixtures/gemini_mock.html');
+  await win.loadFile(fixturePath);
+  await new Promise((r) => setTimeout(r, 200));
+
+  // Load and evaluate src/preload/injected.js into the main world
+  const injectedCode = fs.readFileSync(path.join(__dirname, '../../src/preload/injected.js'), 'utf-8');
+  await win.webContents.executeJavaScript(injectedCode);
+
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const hasMainWorldInterceptor = typeof window.__undec_installClickInterceptor === 'function';
+      const hasInjectFile = typeof window.__undec_injectFile === 'function';
+
+      // Spy on original click
+      let nativeClickCalled = false;
+      const originalClick = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        nativeClickCalled = true;
+        return originalClick.apply(this, arguments);
+      };
+
+      // Install interceptor
+      window.__undec_installClickInterceptor('${samplePngDataUrl}', 600);
+      const isArmed = window.__undec_interceptor_state && window.__undec_interceptor_state.installed === true;
+
+      // Click file input
+      const fileInput = document.getElementById('upload-file-input');
+      fileInput.click();
+
+      const wasIntercepted = window.__undec_interceptor_state && window.__undec_interceptor_state.intercepted === true;
+      const nativeDialogSuppressed = !nativeClickCalled;
+      const filesCount = fileInput.files.length;
+      const fileName = filesCount > 0 ? fileInput.files[0].name : null;
+
+      // Auto-restore test
+      window.__undec_installClickInterceptor('${samplePngDataUrl}', 200);
+      const armedBeforeTimeout = window.__undec_interceptor_state.installed;
+      await new Promise(r => setTimeout(r, 350));
+      const armedAfterTimeout = window.__undec_interceptor_state.installed;
+
+      return {
+        hasMainWorldInterceptor,
+        hasInjectFile,
+        isArmed,
+        wasIntercepted,
+        nativeDialogSuppressed,
+        filesCount,
+        fileName,
+        armedBeforeTimeout,
+        armedAfterTimeout
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.hasMainWorldInterceptor, true, 'injected.js exposes __undec_installClickInterceptor');
+  assert.strictEqual(result.hasInjectFile, true, 'injected.js exposes __undec_injectFile');
+  assert.strictEqual(result.isArmed, true, 'Interceptor arms properly');
+  assert.strictEqual(result.wasIntercepted, true, 'File input click is intercepted');
+  assert.strictEqual(result.nativeDialogSuppressed, true, 'Native click is suppressed (no OS dialog)');
+  assert.strictEqual(result.filesCount, 1, 'File input receives 1 file');
+  assert.strictEqual(result.fileName, 'screenshot.png', 'File name is screenshot.png');
+  assert.strictEqual(result.armedBeforeTimeout, true, 'Armed before timeout');
+  assert.strictEqual(result.armedAfterTimeout, false, 'Disarmed after timeout');
+});
+
+suite.test('Preload uploadViaTriggerSequence arms main-world interceptor and suppresses native click', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      // Clear file input
+      const fileInput = document.getElementById('upload-file-input');
+      fileInput.value = '';
+
+      // Track if original click gets called
+      let nativeClickCalled = false;
+      const nativeClick = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') {
+          nativeClickCalled = true;
+        }
+        return nativeClick.apply(this, arguments);
+      };
+
+      await window.upload.uploadImage({
+        strategy: {
+          type: 'triggerSequence',
+          triggerSelectors: [
+            '[aria-label="Upload & tools"]',
+            '[data-test-id="hidden-local-file-upload-button"]'
+          ],
+          waitTimeoutMs: 800,
+          clickGapMs: 100
+        },
+        dataUrl: '${samplePngDataUrl}'
+      });
+
+      return {
+        filesCount: fileInput.files.length,
+        fileName: fileInput.files.length > 0 ? fileInput.files[0].name : null,
+        nativeClickCalled,
+        interceptorState: window.__undec_interceptor_state
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.filesCount, 1, 'Preload trigger sequence attached 1 file');
+  assert.strictEqual(result.fileName, 'screenshot.png', 'Attached file is screenshot.png');
+  assert.strictEqual(result.nativeClickCalled, false, 'Native file picker click was suppressed by interceptor');
+});
+
+suite.test('2-Step Trigger sequence handles dynamic DOM elements and triggers main-world interceptor', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const input = document.getElementById('upload-file-input');
+      input.value = '';
+
+      window.__testEvents.uploadToolsClicked = 0;
+      window.__testEvents.fileInjected = null;
+
+      // Create a dynamic button that appears after 150ms
+      const dynamicBtn = document.createElement('button');
+      dynamicBtn.setAttribute('aria-label', 'Dynamic upload button');
+      dynamicBtn.style.display = 'none';
+      document.body.appendChild(dynamicBtn);
+
+      setTimeout(() => {
+        dynamicBtn.style.display = 'block';
+      }, 150);
+
+      await window.upload.uploadImage({
+        strategy: {
+          type: 'triggerSequence',
+          triggerSelectors: [
+            '[aria-label="Dynamic upload button"]',
+            '[data-test-id="hidden-local-file-upload-button"]'
+          ],
+          waitTimeoutMs: 1000,
+          clickGapMs: 100
+        },
+        dataUrl: '${samplePngDataUrl}'
+      });
+
+      return {
+        filesCount: input.files ? input.files.length : 0,
+        fileName: input.files && input.files[0] ? input.files[0].name : null,
+        fileInjectedEvent: !!window.__testEvents.fileInjected
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.filesCount, 1, 'Dynamic 2-step sequence attached file');
+  assert.strictEqual(result.fileName, 'screenshot.png', 'Attached file is screenshot.png');
+  assert.strictEqual(result.fileInjectedEvent, true, 'Change event dispatched');
+});
+
+suite.test('Direct input fallback activates when trigger selectors fail completely', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const input = document.getElementById('upload-file-input');
+      input.value = '';
+
+      await window.upload.uploadImage({
+        strategy: {
+          type: 'triggerSequence',
+          triggerSelectors: [
+            '#completely-missing-step1',
+            '#completely-missing-step2'
+          ],
+          waitTimeoutMs: 50,
+          clickGapMs: 20
+        },
+        dataUrl: '${samplePngDataUrl}'
+      });
+
+      return {
+        filesCount: input.files ? input.files.length : 0,
+        fileName: input.files && input.files[0] ? input.files[0].name : null
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.filesCount, 1, 'Direct input fallback successfully injected file');
+  assert.strictEqual(result.fileName, 'screenshot.png', 'File name is screenshot.png');
+});
+
+suite.test('Synthetic paste fallback dispatches ClipboardEvent when file inputs are missing', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      let pasteDispatched = false;
+      let pasteItemCount = 0;
+      let pasteFileName = '';
+
+      const editor = document.querySelector('.ql-editor');
+      const onPaste = (e) => {
+        pasteDispatched = true;
+        if (e.clipboardData && e.clipboardData.files) {
+          pasteItemCount = e.clipboardData.files.length;
+          if (pasteItemCount > 0) pasteFileName = e.clipboardData.files[0].name;
+        }
+      };
+      editor.addEventListener('paste', onPaste);
+
+      // Remove all file inputs
+      const allInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+      const detached = allInputs.map(inp => {
+        const p = inp.parentNode;
+        inp.remove();
+        return { p, inp };
+      });
+
+      try {
+        await window.upload.uploadImage({
+          strategy: {
+            type: 'triggerSequence',
+            triggerSelectors: ['#missing-1', '#missing-2'],
+            waitTimeoutMs: 50,
+            clickGapMs: 20
+          },
+          dataUrl: '${samplePngDataUrl}'
+        });
+      } finally {
+        detached.forEach(({ p, inp }) => p.appendChild(inp));
+        editor.removeEventListener('paste', onPaste);
+      }
+
+      return {
+        pasteDispatched,
+        pasteItemCount,
+        pasteFileName
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.pasteDispatched, true, 'Synthetic paste event must be dispatched to editor');
+  assert.strictEqual(result.pasteItemCount, 1, 'ClipboardData must have 1 file');
+  assert.strictEqual(result.pasteFileName, 'screenshot.png', 'Pasted file name must be screenshot.png');
+});
+
+suite.test('Submit engine retries when send button is initially disabled and clicks when enabled', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const sendBtn = document.getElementById('send-btn');
+      sendBtn.setAttribute('disabled', 'true');
+      let clickCountBefore = window.__testEvents.sendClicked;
+
+      // Enable after 450ms (within 8 * 200ms = 1600ms window)
+      setTimeout(() => {
+        sendBtn.removeAttribute('disabled');
+      }, 450);
+
+      const startTime = Date.now();
+      const ok = await window.upload.submitPrompt();
+      const elapsed = Date.now() - startTime;
+      const clickCountAfter = window.__testEvents.sendClicked;
+
+      return {
+        ok,
+        elapsed,
+        clickCountBefore,
+        clickCountAfter,
+        clicked: clickCountAfter > clickCountBefore
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.ok, true, 'submitPrompt must succeed when button becomes enabled');
+  assert.strictEqual(result.clicked, true, 'Send button must receive click event after becoming enabled');
+  assert.ok(result.elapsed >= 400, 'Must have waited for retry interval before clicking');
+});
+
+suite.test('Submit engine retries when aria-disabled="true" and succeeds once cleared', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const sendBtn = document.getElementById('send-btn');
+      sendBtn.setAttribute('aria-disabled', 'true');
+      let clickCountBefore = window.__testEvents.sendClicked;
+
+      setTimeout(() => {
+        sendBtn.removeAttribute('aria-disabled');
+      }, 350);
+
+      const ok = await window.upload.submitPrompt();
+      const clickCountAfter = window.__testEvents.sendClicked;
+
+      return {
+        ok,
+        clicked: clickCountAfter > clickCountBefore
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.ok, true, 'submitPrompt handles aria-disabled');
+  assert.strictEqual(result.clicked, true, 'Send button clicked once aria-disabled removed');
+});
+
+suite.test('Submit engine exhausts retries and falls back to Enter keydown on editor', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const sendBtn = document.getElementById('send-btn');
+      sendBtn.setAttribute('disabled', 'true');
+      window.__testEvents.enterKeyDownDispatched = 0;
+
+      const startTime = Date.now();
+      const ok = await window.upload.submitPrompt();
+      const elapsed = Date.now() - startTime;
+      const enterCount = window.__testEvents.enterKeyDownDispatched;
+
+      sendBtn.removeAttribute('disabled');
+
+      return {
+        ok,
+        elapsed,
+        enterCount
+      };
+    })()
+  `);
+
+  assert.strictEqual(result.ok, true, 'submitPrompt must succeed via Enter fallback');
+  assert.ok(result.enterCount >= 1, 'Enter keydown event dispatched to editor');
+  assert.ok(result.elapsed >= 1500, 'Must have exhausted 8 retries (~1600ms) before Enter fallback');
+});
+
+suite.test('Submit engine returns false gracefully if neither send button nor editor exists', async () => {
+  const result = await win.webContents.executeJavaScript(`
+    (async () => {
+      const sendBtn = document.getElementById('send-btn');
+      const editor = document.querySelector('rich-textarea');
+      const sendParent = sendBtn.parentNode;
+      const editorParent = editor.parentNode;
+
+      sendBtn.remove();
+      editor.remove();
+
+      let ok = null;
+      try {
+        ok = await window.upload.submitPrompt();
+      } finally {
+        sendParent.appendChild(sendBtn);
+        editorParent.appendChild(editor);
+      }
+
+      return { ok };
+    })()
+  `);
+
+  assert.strictEqual(result.ok, false, 'submitPrompt returns false gracefully when no submit target exists');
+});
+
+app.whenReady().then(async () => {
+  try {
+    const success = await suite.run();
+    if (win && !win.isDestroyed()) {
+      win.close();
+    }
+    process.exit(success ? 0 : 1);
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+});

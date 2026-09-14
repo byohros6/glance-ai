@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Builds & Binaries
+dist/
+*.exe
+
+# Logs & System
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Agent workspaces
+.agents/

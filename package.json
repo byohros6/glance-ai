@@ -1,0 +1,45 @@
+{
+  "name": "undecgpt",
+  "version": "1.0.0",
+  "description": "Undetectable AI Assistant powered by Google Gemini",
+  "main": "src/main/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/runner.js",
+    "test:smoke": "electron test_smoke.js",
+    "dist": "electron-builder --win portable"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "gemini",
+    "stealth",
+    "undetectable"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.undecgpt.app",
+    "productName": "UndecGPT",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "UndecGPT-Portable.exe"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ]
+  }
+}

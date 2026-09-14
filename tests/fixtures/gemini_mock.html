@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini Mock Page for UndecGPT Testing</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+    }
+    .conversation-container {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #45475a;
+      margin-bottom: 20px;
+      padding: 10px;
+    }
+    .chat-filler {
+      height: 800px;
+    }
+    .prompt-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ql-editor {
+      min-height: 40px;
+      flex: 1;
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      outline: none;
+    }
+    button {
+      background: #89b4fa;
+      color: #11111b;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #upload-file-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Gemini Mock Session</h2>
+  <div class="conversation-container" id="chat-container">
+    <div class="chat-filler">Chat history messages...</div>
+  </div>
+
+  <div class="prompt-area">
+    <button id="upload-tools-btn" aria-label="Upload & tools">Upload</button>
+    <input
+      type="file"
+      id="upload-file-input"
+      data-test-id="hidden-local-file-upload-button"
+      aria-hidden="true"
+    />
+    <rich-textarea>
+      <div class="ql-editor" contenteditable="true" role="textbox" aria-label="Enter a prompt here"></div>
+    </rich-textarea>
+    <button id="send-btn" aria-label="Send message">Send</button>
+  </div>
+
+  <div id="test-events-log" style="display:none;"></div>
+
+  <script>
+    window.__testEvents = {
+      uploadToolsClicked: 0,
+      fileInputClicked: 0,
+      fileInjected: null,
+      sendClicked: 0,
+      editorInput: '',
+      enterKeyDownDispatched: 0
+    };
+
+    const uploadToolsBtn = document.getElementById('upload-tools-btn');
+    const fileInput = document.getElementById('upload-file-input');
+    const editor = document.querySelector('.ql-editor');
+    const sendBtn = document.getElementById('send-btn');
+
+    uploadToolsBtn.addEventListener('click', () => {
+      window.__testEvents.uploadToolsClicked++;
+    });
+
+    fileInput.addEventListener('click', () => {
+      window.__testEvents.fileInputClicked++;
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        window.__testEvents.fileInjected = {
+          name: fileInput.files[0].name,
+          size: fileInput.files[0].size,
+          type: fileInput.files[0].type
+        };
+      }
+    });
+
+    editor.addEventListener('input', () => {
+      window.__testEvents.editorInput = editor.innerText || editor.textContent;
+    });
+
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        window.__testEvents.enterKeyDownDispatched++;
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      window.__testEvents.sendClicked++;
+    });
+  </script>
+</body>
+</html>
