@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UndecGPT - Configuration Dashboard</title>
+  <style>
+    :root {
+      --bg-primary: #0d0f14;
+      --bg-card: #151821;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.35);
+      --success: #10b981;
+      --danger: #ef4444;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .titlebar {
+      height: 42px;
+      background: rgba(13, 15, 20, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .titlebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .titlebar-brand svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.2;
+    }
+
+    .stealth-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 2px 8px;
+      border-radius: 12px;
+      letter-spacing: 0.2px;
+    }
+
+    .titlebar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .win-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .win-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+
+    .win-btn.close:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .dashboard-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .dashboard-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .dashboard-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .dashboard-content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    .launch-banner {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.22) 0%, rgba(99, 102, 241, 0.22) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .launch-info h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .launch-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .launch-btn {
+      background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .launch-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--accent-glow);
+      filter: brightness(1.1);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .control-subtext {
+      font-size: 11px;
+      color: #6b7280;
+      line-height: 1.3;
+      margin-top: 2px;
+    }
+
+    .slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+      width: 120px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .val-display {
+      font-size: 12px;
+      font-family: monospace;
+      color: #93c5fd;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #374151;
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-toggle {
+      background-color: var(--accent);
+    }
+
+    input:checked + .slider-toggle:before {
+      transform: translateX(18px);
+    }
+
+    .preset-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover, .preset-btn.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--accent);
+      color: #93c5fd;
+    }
+
+    textarea {
+      width: 100%;
+      background: #0d0f14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-main);
+      padding: 10px;
+      font-size: 12px;
+      font-family: var(--font-sans);
+      resize: vertical;
+      min-height: 75px;
+      user-select: text;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    .shortcuts-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .shortcuts-table tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .shortcuts-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .shortcuts-table td {
+      padding: 7px 4px;
+    }
+
+    .shortcut-name {
+      color: #d1d5db;
+      font-weight: 500;
+    }
+
+    .shortcut-desc {
+      font-size: 10.5px;
+      color: #6b7280;
+    }
+
+    .shortcut-key-cell {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #e5e7eb;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .rebind-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      margin-left: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .rebind-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .rebind-btn.recording {
+      background: var(--danger);
+      color: #fff;
+      border-color: var(--danger);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .footer {
+      padding-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6b7280;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .status-toast {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: #1e2230;
+      border: 1px solid var(--border);
+      color: #e5e7eb;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      pointer-events: none;
+    }
+
+    .status-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <div class="titlebar-brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>UndecGPT</span>
+      <span class="stealth-badge">100% Free & Undetectable</span>
+    </div>
+    <div class="titlebar-controls">
+      <button id="btn-minimize" class="win-btn" title="Minimize">─</button>
+      <button id="btn-close" class="win-btn close" title="Exit UndecGPT">✕</button>
+    </div>
+  </div>
+
+  <div class="dashboard-content">
+    <div class="launch-banner">
+      <div class="launch-info">
+        <h2>Launch Gemini Stealth Overlay</h2>
+        <p>Positions window on top, applies screen-share protection, hides from taskbar, and connects to Gemini.</p>
+        <p style="margin-top: 4px; color: #93c5fd; font-weight: 500;">Press <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">Ctrl + B</code> anytime to return to this Dashboard.</p>
+      </div>
+      <button id="btn-launch-gemini" class="launch-btn">
+        <span>🚀 Launch Gemini</span>
+      </button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🪟 Window Dimensions & Display</span>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Overlay Width</div>
+            <div class="control-subtext">Width of the Gemini overlay</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="input-width" min="300" max="1400" step="10">
+            <span id="val-width" class="val-display">520px</span>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Overlay Height</div>
+            <div class="control-subtext">Height of the Gemini overlay</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="input-height" min="300" max="1200" step="10">
+            <span id="val-height" class="val-display">650px</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="control-label" style="margin-bottom: 6px;">Size Presets</div>
+          <div class="preset-group">
+            <button class="preset-btn" data-w="420" data-h="580">Compact (420×580)</button>
+            <button class="preset-btn" data-w="520" data-h="650">Default (520×650)</button>
+            <button class="preset-btn" data-w="700" data-h="750">Wide (700×750)</button>
+            <button class="preset-btn" data-w="520" data-h="900">Tall (520×900)</button>
+          </div>
+        </div>
+
+        <div class="control-row" style="margin-top: 4px;">
+          <div>
+            <div class="control-label">Window Opacity</div>
+            <div class="control-subtext">Transparency level of the overlay</div>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="input-opacity" min="0.15" max="1.0" step="0.05">
+            <span id="val-opacity" class="val-display">95%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🛡️ Stealth & Focus Modes</span>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Window Focusable Mode (<kbd>Ctrl+F</kbd>)</div>
+            <div class="control-subtext">When OFF, clicking the overlay won't unfocus other apps/games.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-focusable">
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Click-Through Mode (<kbd>Ctrl+M</kbd>)</div>
+            <div class="control-subtext">When ON, clicks pass straight through overlay to underlying windows.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="toggle-clickthrough">
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Screen-Share Invisibility</div>
+            <div class="control-subtext">Hides from Zoom, Teams, Discord, OBS, WebRTC screen shares.</div>
+          </div>
+          <span style="font-size: 11px; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); padding: 3px 8px; border-radius: 4px;">ACTIVE</span>
+        </div>
+
+        <div class="control-row">
+          <div>
+            <div class="control-label">Taskbar & Alt+Tab Hiding</div>
+            <div class="control-subtext">Zero presence in Windows taskbar via WS_EX_TOOLWINDOW.</div>
+          </div>
+          <span style="font-size: 11px; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); padding: 3px 8px; border-radius: 4px;">ACTIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📝 Default Screen-Solve Prompt</span>
+        <div class="preset-group" id="prompt-presets">
+          <button class="preset-btn" data-preset="coding">💻 Coding / LeetCode</button>
+          <button class="preset-btn" data-preset="interview">🎯 Technical Interview</button>
+          <button class="preset-btn" data-preset="exam">📝 Multiple Choice / Exam</button>
+          <button class="preset-btn" data-preset="general">💡 General Assistant</button>
+        </div>
+      </div>
+      <textarea id="prompt-textarea" rows="3" placeholder="Enter the prompt that will accompany your screenshot..."></textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280;">
+        <span>Attached automatically alongside screenshot when you press <code style="background: rgba(255,255,255,0.06); padding: 2px 4px; border-radius: 3px;">Ctrl + S</code></span>
+        <span id="prompt-char-count">0 characters</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">⌨️ Global Keybinds Manager</span>
+        <button id="btn-reset-shortcuts" class="preset-btn" style="font-size: 10.5px;">↺ Reset to Defaults</button>
+      </div>
+
+      <table class="shortcuts-table">
+        <tbody id="shortcuts-body">
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <span>UndecGPT v1.0.0 • Clean Native Build (Zero Bloatware / Zero Subscriptions)</span>
+      <span>Settings save automatically</span>
+    </div>
+  </div>
+
+  <div id="status-toast" class="status-toast">Settings saved</div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

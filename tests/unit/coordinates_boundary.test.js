@@ -84,7 +84,7 @@ suite.test('BrowserWindow sets and updates position accurately', () => {
 app.whenReady().then(async () => {
   const success = await suite.run();
   if (win && !win.isDestroyed()) {
-    win.close();
+    win.destroy();
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

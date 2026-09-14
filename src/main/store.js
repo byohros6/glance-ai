@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS = {
   shortcuts: {
     screenshot: 'CommandOrControl+S',
     send: 'CommandOrControl+Return',
+    returnHome: 'CommandOrControl+B',
     toggleVisibility: 'CommandOrControl+H',
     toggleFocus: 'CommandOrControl+F',
     toggleClickThrough: 'CommandOrControl+M',

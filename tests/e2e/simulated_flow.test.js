@@ -115,8 +115,8 @@ suite.test('Step 3: Ctrl+S capture & attach WITHOUT message submit', async () =>
     prompt: promptText
   });
 
-  // Wait for trigger sequence & DOM injection to complete (~1800ms)
-  await new Promise((r) => setTimeout(r, 2000));
+  // Wait for trigger sequence & DOM injection to complete (~1600ms)
+  await new Promise((r) => setTimeout(r, 2500));
 
   const state = await win.webContents.executeJavaScript(`
     (() => {

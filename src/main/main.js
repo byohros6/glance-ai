@@ -1,7 +1,7 @@
 import { app, BrowserWindow, session, ipcMain, shell, globalShortcut } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { store } from './store.js';
+import { store, DEFAULT_SETTINGS } from './store.js';
 import { registerGlobalShortcuts } from './shortcuts.js';
 import { captureScreen, captureScreenWithHide } from './screenshot.js';
 
@@ -23,30 +23,83 @@ if (!gotLock) {
 }
 
 let mainWindow = null;
+let currentMode = 'dashboard'; // 'dashboard' or 'gemini'
 
 function getMainWindow() {
   return mainWindow;
 }
 
-function createWindow() {
+export function showDashboard() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  currentMode = 'dashboard';
+
+  mainWindow.setSize(840, 720);
+  mainWindow.center();
+  mainWindow.setOpacity(1.0);
+  mainWindow.setIgnoreMouseEvents(false);
+  mainWindow.setFocusable(true);
+  mainWindow.setAlwaysOnTop(true);
+  mainWindow.setContentProtection(false);
+  mainWindow.loadFile(path.join(__dirname, '../renderer/dashboard.html'));
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+export function launchGeminiOverlay() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  currentMode = 'gemini';
+
   const width = store.get('windowWidth') || 520;
   const height = store.get('windowHeight') || 650;
   const savedX = store.get('x');
   const savedY = store.get('y') ?? 50;
-
   const isFocusable = store.get('focusable') ?? true;
 
+  mainWindow.setSize(width, height);
+  if (savedX !== null && Number.isFinite(savedX) && Number.isFinite(savedY)) {
+    mainWindow.setPosition(savedX, savedY);
+  }
+
+  const isUndetectable = store.get('undetectable') !== false;
+  mainWindow.setContentProtection(isUndetectable);
+  mainWindow.setSkipTaskbar(true);
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  const initialOpacity = store.get('opacity') || 0.95;
+  mainWindow.setOpacity(initialOpacity);
+  mainWindow.setFocusable(isFocusable);
+
+  if (store.get('clickThrough')) {
+    mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  } else {
+    mainWindow.setIgnoreMouseEvents(false);
+  }
+
+  mainWindow.webContents.setUserAgent(CHROME_USER_AGENT);
+  mainWindow.loadURL('https://gemini.google.com/app', {
+    userAgent: CHROME_USER_AGENT
+  });
+}
+
+function toggleDashboard() {
+  if (currentMode === 'gemini') {
+    showDashboard();
+  } else {
+    launchGeminiOverlay();
+  }
+}
+
+function createWindow() {
   mainWindow = new BrowserWindow({
-    width,
-    height,
-    x: savedX !== null ? savedX : undefined,
-    y: savedY,
+    width: 840,
+    height: 720,
+    center: true,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     type: 'toolbar', // Windows WS_EX_TOOLWINDOW: completely hides from taskbar and Alt+Tab
-    focusable: isFocusable,
+    focusable: true,
     hasShadow: false,
     resizable: true,
     movable: true,
@@ -60,30 +113,6 @@ function createWindow() {
       spellcheck: true
     }
   });
-
-  // Explicitly ensure it never shows up in Windows Taskbar
-  mainWindow.setSkipTaskbar(true);
-
-  // Windows Screen-Share Invisibility (SetWindowDisplayAffinity)
-  const isUndetectable = store.get('undetectable') !== false;
-  mainWindow.setContentProtection(isUndetectable);
-  console.log(`[UndecGPT] Content protection (screen-share undetectable): ${isUndetectable}`);
-
-  // Float above other windows
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
-
-  // Set initial opacity
-  const initialOpacity = store.get('opacity') || 0.95;
-  mainWindow.setOpacity(initialOpacity);
-
-  // Set initial click-through if enabled
-  if (store.get('clickThrough')) {
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    console.log('[UndecGPT] Click-through mode initialized: ON');
-  }
-
-  // Set Chrome User-Agent for Google Gemini authentication
-  mainWindow.webContents.setUserAgent(CHROME_USER_AGENT);
 
   // Handle child windows / OAuth popups
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -101,27 +130,29 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  // Load Gemini
-  mainWindow.loadURL('https://gemini.google.com/app', {
-    userAgent: CHROME_USER_AGENT
-  });
-
-  // Save window bounds on resize/move (debounced in store)
+  // Save window bounds on resize/move only when in Gemini overlay mode
   mainWindow.on('resize', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const [w, h] = mainWindow.getSize();
-    store.setBounds({ width: w, height: h });
+    if (currentMode === 'gemini') {
+      const [w, h] = mainWindow.getSize();
+      store.setBounds({ width: w, height: h });
+    }
   });
 
   mainWindow.on('move', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return;
-    const [x, y] = mainWindow.getPosition();
-    store.setBounds({ x, y });
+    if (currentMode === 'gemini') {
+      const [x, y] = mainWindow.getPosition();
+      store.setBounds({ x, y });
+    }
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // Start with Dashboard
+  showDashboard();
 }
 
 // App lifecycle
@@ -133,7 +164,7 @@ app.whenReady().then(() => {
   });
 
   createWindow();
-  registerGlobalShortcuts(getMainWindow);
+  registerGlobalShortcuts(getMainWindow, toggleDashboard);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -259,5 +290,32 @@ ipcMain.handle('set-click-through', (_event, enabled) => {
   }
   return enabled;
 });
+
+ipcMain.handle('launch-gemini', () => {
+  launchGeminiOverlay();
+  return true;
+});
+
+ipcMain.handle('open-dashboard', () => {
+  showDashboard();
+  return true;
+});
+
+ipcMain.handle('get-app-mode', () => currentMode);
+
+ipcMain.handle('update-shortcut', (_event, { action, accelerator }) => {
+  const shortcuts = store.get('shortcuts') || {};
+  shortcuts[action] = accelerator;
+  store.set('shortcuts', shortcuts);
+  registerGlobalShortcuts(getMainWindow, toggleDashboard);
+  return store.get('shortcuts');
+});
+
+ipcMain.handle('reset-shortcuts', () => {
+  store.set('shortcuts', { ...DEFAULT_SETTINGS.shortcuts });
+  registerGlobalShortcuts(getMainWindow, toggleDashboard);
+  return store.get('shortcuts');
+});
+
 
 

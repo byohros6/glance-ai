@@ -32,10 +32,14 @@ export async function captureScreen() {
 
   // Method 1: Electron native desktopCapturer (fast & in-memory)
   try {
-    const sources = await desktopCapturer.getSources({
+    const sourcesPromise = desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: captureWidth, height: captureHeight }
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('desktopCapturer timed out after 1500ms')), 1500)
+    );
+    const sources = await Promise.race([sourcesPromise, timeoutPromise]);
 
     if (sources && sources.length > 0) {
       const primaryIdStr = primaryDisplay.id != null ? primaryDisplay.id.toString() : '';

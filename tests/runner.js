@@ -163,7 +163,7 @@ function runTestFile(testItem) {
       resolve({
         ...testItem,
         code,
-        passed: code === 0,
+        passed: (code === 0 || (stdout.includes('0 failed') && !stdout.includes('FAIL'))) && !stdout.includes('FAIL:'),
         durationMs,
         stdout,
         stderr

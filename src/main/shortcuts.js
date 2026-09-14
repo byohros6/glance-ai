@@ -5,7 +5,7 @@ import { store } from './store.js';
 const MOVE_OFFSET = 40;
 const SCROLL_OFFSET = 320;
 
-export function registerGlobalShortcuts(getMainWindow) {
+export function registerGlobalShortcuts(getMainWindow, onToggleDashboard = null) {
   // Clear any existing shortcuts
   globalShortcut.unregisterAll();
 
@@ -61,6 +61,18 @@ export function registerGlobalShortcuts(getMainWindow) {
   if (sendKey !== 'CommandOrControl+Enter' && !globalShortcut.isRegistered('CommandOrControl+Enter')) {
     tryRegister('CommandOrControl+Enter', handleSend);
   }
+
+  // 3. Return Home / Dashboard (Ctrl + B)
+  const homeKey = shortcuts.returnHome || 'CommandOrControl+B';
+  tryRegister(homeKey, () => {
+    const win = getMainWindow();
+    if (!win || win.isDestroyed()) return;
+    console.log('[Shortcuts] Return Home / Dashboard triggered (Ctrl+B)');
+    win.webContents.send('action:toggle-dashboard');
+    if (typeof onToggleDashboard === 'function') {
+      onToggleDashboard();
+    }
+  });
 
   // 3. Toggle Focusable Mode (Ctrl + F)
   const focusKey = shortcuts.toggleFocus || 'CommandOrControl+F';

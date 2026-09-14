@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld('undecgpt', {
   setClickThrough: (val) => ipcRenderer.invoke('set-click-through', val),
   getClickThrough: () => ipcRenderer.invoke('get-click-through'),
   setIgnoreMouseEvents: (ignore, opts) => ipcRenderer.invoke('set-ignore-mouse-events', ignore, opts),
+  launchGemini: () => ipcRenderer.invoke('launch-gemini'),
+  openDashboard: () => ipcRenderer.invoke('open-dashboard'),
+  getAppMode: () => ipcRenderer.invoke('get-app-mode'),
+  updateShortcut: (action, accelerator) => ipcRenderer.invoke('update-shortcut', { action, accelerator }),
+  resetShortcuts: () => ipcRenderer.invoke('reset-shortcuts'),
   onShortcutAction: (callback) => {
     ipcRenderer.on('shortcut-action', (_event, action, payload) => callback(action, payload));
   }
@@ -413,7 +418,7 @@ ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt }) =
   showToast('📸 Attaching screenshot...');
   if (dataUrl) {
     await uploadScreenshotToGemini(dataUrl);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 200));
   }
 
   if (prompt) {
@@ -432,6 +437,11 @@ ipcRenderer.on('action:submit', async () => {
   } else {
     showToast('⚠️ Send button not ready yet');
   }
+});
+
+// 2b. Toggle Dashboard / Gemini (Ctrl + B)
+ipcRenderer.on('action:toggle-dashboard', () => {
+  ipcRenderer.invoke('open-dashboard');
 });
 
 // 3. Scroll Chat
@@ -475,13 +485,16 @@ ipcRenderer.on('action:show-toast', (_event, payload) => {
   if (text) showToast(text, duration);
 });
 
-// Once DOM is ready, inject our custom stealth floating top bar
-if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', () => {
+// Once DOM is ready, inject our custom stealth floating top bar (only on Gemini overlay, not Dashboard)
+const isDashboard = typeof window !== 'undefined' && window.location && window.location.href.includes('dashboard.html');
+if (!isDashboard) {
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => {
+      injectStealthHeader();
+    });
+  } else {
     injectStealthHeader();
-  });
-} else {
-  injectStealthHeader();
+  }
 }
 
 function updateFocusButton(isFocusable) {
@@ -639,6 +652,7 @@ function injectStealthHeader() {
         <span>Opacity</span>
         <input type="range" id="undec-opacity-slider" class="undec-slider" min="0.15" max="1.0" step="0.05" value="0.95">
       </div>
+      <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">🏠 Menu</button>
       <button id="undec-settings-btn" class="undec-btn" title="Settings & Prompt">⚙️</button>
       <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">👁️</button>
       <button id="undec-close-btn" class="undec-btn" title="Emergency Exit (Ctrl+Shift+Q)">✕</button>
@@ -763,6 +777,13 @@ function injectStealthHeader() {
   closeBtn.addEventListener('click', () => {
     ipcRenderer.invoke('close-app');
   });
+
+  const menuBtn = toolbar.querySelector('#undec-menu-btn');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      ipcRenderer.invoke('open-dashboard');
+    });
+  }
 
   settingsBtn.addEventListener('click', () => {
     openSettingsModal();

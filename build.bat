@@ -3,7 +3,8 @@ cd /d "%~dp0"
 echo ====================================================
 echo  Building UndecGPT Standalone Portable Executable
 echo ====================================================
-echo.
+set CSC_IDENTITY_AUTO_DISCOVERY=false
+set WIN_SIGN_PARAMS=""
 npx electron-builder --win portable
 echo.
 if exist "dist\UndecGPT-Portable.exe" (
