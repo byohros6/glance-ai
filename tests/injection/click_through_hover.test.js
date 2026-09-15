@@ -44,7 +44,7 @@ suite.test('Toolbar hover allows controls clicking during Click-Through mode', a
   win = new BrowserWindow({
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

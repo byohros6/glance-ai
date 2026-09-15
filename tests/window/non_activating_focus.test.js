@@ -32,7 +32,7 @@ suite.test('Window starts with focusable mode and can switch to non-activating',
     show: false,
     focusable: true,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

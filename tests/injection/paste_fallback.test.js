@@ -26,7 +26,7 @@ suite.test('Direct input fallback injects screenshot when trigger selectors fail
   win = new BrowserWindow({
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

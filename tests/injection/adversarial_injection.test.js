@@ -27,7 +27,7 @@ suite.test('Standalone injected.js: Arms, suppresses native dialog, injects File
   win = new BrowserWindow({
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

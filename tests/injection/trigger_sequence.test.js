@@ -26,7 +26,7 @@ suite.test('Upload triggers 2-step sequence and intercepts file input click', as
   win = new BrowserWindow({
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

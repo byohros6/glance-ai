@@ -37,7 +37,7 @@ suite.test('Non-Activating Focus Mode: focus does not leak to overlay on click o
     focusable: false,
     type: 'toolbar',
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

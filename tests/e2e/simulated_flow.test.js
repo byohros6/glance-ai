@@ -48,7 +48,7 @@ suite.test('Step 1: Launch stealth overlay window', async () => {
     hasShadow: false,
     show: true,
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false

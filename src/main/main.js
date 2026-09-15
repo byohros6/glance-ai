@@ -106,7 +106,7 @@ function createWindow() {
     title: 'Undec',
     backgroundColor: '#0d0f14',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, '../preload/preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
       devTools: true,

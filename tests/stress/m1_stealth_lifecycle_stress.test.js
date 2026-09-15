@@ -41,7 +41,7 @@ suite.test('Window Attributes: Borderless, transparent, type toolbar, skipTaskba
     show: true,
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: path.join(__dirname, '../../src/preload/preload.js'),
+      preload: path.join(__dirname, '../../src/preload/preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true
     }
