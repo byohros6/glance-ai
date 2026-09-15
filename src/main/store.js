@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
 
+export const SUPPORTED_PROVIDERS = ['gemini', 'chatgpt', 'claude', 'perplexity'];
+
 export const DEFAULT_SETTINGS = {
+  provider: 'gemini',
   windowWidth: 520,
   windowHeight: 650,
   x: null,
@@ -34,7 +37,15 @@ export const DEFAULT_SETTINGS = {
 
 export class SettingsStore {
   constructor(customPath = null) {
-    this.filePath = customPath || (app ? path.join(app.getPath('userData'), 'undecgpt_settings.json') : null);
+    if (customPath) {
+      this.filePath = customPath;
+    } else if (app) {
+      const primaryPath = path.join(app.getPath('userData'), 'glance_settings.json');
+      const legacyPath = path.join(app.getPath('userData'), 'undecgpt_settings.json');
+      this.filePath = !fs.existsSync(primaryPath) && fs.existsSync(legacyPath) ? legacyPath : primaryPath;
+    } else {
+      this.filePath = null;
+    }
     this.settings = { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SETTINGS.shortcuts } };
     this._saveTimer = null;
     if (typeof process !== 'undefined' && process && typeof process.on === 'function') {
@@ -68,6 +79,9 @@ export class SettingsStore {
     if (typeof raw.clickThrough === 'boolean') clean.clickThrough = raw.clickThrough;
     if (typeof raw.autoSubmit === 'boolean') clean.autoSubmit = raw.autoSubmit;
     if (typeof raw.prompt === 'string') clean.prompt = raw.prompt;
+    if (typeof raw.provider === 'string' && SUPPORTED_PROVIDERS.includes(raw.provider.toLowerCase())) {
+      clean.provider = raw.provider.toLowerCase();
+    }
 
     if (raw.shortcuts && typeof raw.shortcuts === 'object' && !Array.isArray(raw.shortcuts)) {
       clean.shortcuts = { ...DEFAULT_SETTINGS.shortcuts, ...raw.shortcuts };

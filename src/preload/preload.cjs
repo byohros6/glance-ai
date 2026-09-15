@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 
 // Expose API to renderer
-contextBridge.exposeInMainWorld('undecgpt', {
+const glanceApi = {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   setOpacity: (val) => ipcRenderer.invoke('set-opacity', val),
@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('undecgpt', {
   getClickThrough: () => ipcRenderer.invoke('get-click-through'),
   setIgnoreMouseEvents: (ignore, opts) => ipcRenderer.invoke('set-ignore-mouse-events', ignore, opts),
   launchGemini: () => ipcRenderer.invoke('launch-gemini'),
+  launchOverlay: () => ipcRenderer.invoke('launch-overlay'),
   openDashboard: () => ipcRenderer.invoke('open-dashboard'),
   getAppMode: () => ipcRenderer.invoke('get-app-mode'),
   updateShortcut: (action, accelerator) => ipcRenderer.invoke('update-shortcut', { action, accelerator }),
@@ -25,7 +26,10 @@ contextBridge.exposeInMainWorld('undecgpt', {
   onShortcutAction: (callback) => {
     ipcRenderer.on('shortcut-action', (_event, action, payload) => callback(action, payload));
   }
-});
+};
+
+contextBridge.exposeInMainWorld('undecgpt', glanceApi);
+contextBridge.exposeInMainWorld('glanceai', glanceApi);
 
 // Synchronous click-through tracking to eliminate async IPC race conditions
 let isClickThroughActive = false;
@@ -524,13 +528,13 @@ function updateFocusButton(isFocusable) {
   const btn = document.getElementById('undec-focus-btn');
   if (!btn) return;
   if (isFocusable) {
-    btn.innerHTML = '🎯 Focus: ON';
+    btn.textContent = 'Focus: ON';
     btn.classList.add('active');
-    btn.title = 'Focusable mode: clicking will activate window & allow typing in Gemini (Ctrl+F to toggle)';
+    btn.title = 'Focus Mode active: clicking will activate overlay & allow typing (Ctrl+F to toggle)';
   } else {
-    btn.innerHTML = '🔒 Focus: OFF';
+    btn.textContent = 'Focus: OFF';
     btn.classList.remove('active');
-    btn.title = 'Non-focusable mode: clicking will NOT unfocus other apps, typing disabled in Gemini (Ctrl+F to toggle)';
+    btn.title = 'Focus Mode non-intrusive: clicking will NOT unfocus other apps (Ctrl+F to toggle)';
   }
 }
 
@@ -538,13 +542,13 @@ function updateClickThroughButton(isClickThrough) {
   const btn = document.getElementById('undec-clickthru-btn');
   if (!btn) return;
   if (isClickThrough) {
-    btn.innerHTML = '👻 Click-Thru: ON';
+    btn.textContent = 'Click-Through: ON';
     btn.classList.add('active');
-    btn.title = 'Click-through active: all clicks pass through to apps behind Gemini. Hover toolbar or press Ctrl+M to toggle.';
+    btn.title = 'Click-through active: clicks pass through overlay to underlying apps. Hover toolbar or press Ctrl+M to toggle.';
   } else {
-    btn.innerHTML = '🖱️ Click-Thru: OFF';
+    btn.textContent = 'Click-Through: OFF';
     btn.classList.remove('active');
-    btn.title = 'Click-through inactive: normal interaction with Gemini (Ctrl+M to toggle)';
+    btn.title = 'Click-through inactive: normal interaction with overlay (Ctrl+M to toggle)';
   }
 }
 
@@ -655,29 +659,29 @@ function injectStealthHeader() {
   toolbar.innerHTML = `
     <div class="brand">
       <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span>Undec</span>
-      <span class="undec-badge" title="Always-on-top workspace companion">✨ HUD</span>
+      <span>Glance AI</span>
+      <span class="undec-badge" title="Always-on-top workspace companion">HUD</span>
     </div>
     <div class="controls">
       <button id="undec-clickthru-btn" class="undec-btn" title="Toggle Click-Through Mode (Ctrl+M)">
-        🖱️ Click-Thru: OFF
+        Click-Through: OFF
       </button>
-      <button id="undec-focus-btn" class="undec-btn active" title="Toggle Non-Intrusive Focus (Ctrl+F)">
-        🎯 Focus: ON
+      <button id="undec-focus-btn" class="undec-btn active" title="Toggle Focus Mode (Ctrl+F)">
+        Focus: ON
       </button>
       <button id="undec-snap-btn" class="undec-btn" title="Capture Workspace (Ctrl+S)">
-        📸 Capture
+        Capture
       </button>
-      <button id="undec-send-btn" class="undec-btn" title="Send to Gemini (Ctrl+Enter)">
-        🚀 Send
+      <button id="undec-send-btn" class="undec-btn" title="Send Message (Ctrl+Enter)">
+        Send
       </button>
       <div class="undec-slider-wrap" title="Adjust Window Opacity (Ctrl+[ or Ctrl+])">
         <span>Opacity</span>
         <input type="range" id="undec-opacity-slider" class="undec-slider" min="0.15" max="1.0" step="0.05" value="0.95">
       </div>
-      <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">🏠 Menu</button>
-      <button id="undec-settings-btn" class="undec-btn" title="Settings & Prompt">⚙️</button>
-      <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">👁️</button>
+      <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">Menu</button>
+      <button id="undec-settings-btn" class="undec-btn" title="Settings & Prompt">Config</button>
+      <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">Hide</button>
       <button id="undec-close-btn" class="undec-btn" title="Close App (Ctrl+Shift+Q)">✕</button>
     </div>
   `;
@@ -742,8 +746,8 @@ function injectStealthHeader() {
     updateClickThroughButton(next);
     showToast(
       next
-        ? '👻 Click-Through: ON (clicks pass through to apps underneath)'
-        : '🖱️ Click-Through: OFF (normal interaction)'
+        ? 'Click-Through: ON (clicks pass through to apps underneath)'
+        : 'Click-Through: OFF (normal interaction)'
     );
   });
 
@@ -755,15 +759,15 @@ function injectStealthHeader() {
     updateFocusButton(next);
     showToast(
       next
-        ? '🎯 Focus: ON (typing enabled)'
-        : '🔒 Focus: OFF (stealth clicks won\'t unfocus other apps)'
+        ? 'Focus: ON (typing enabled)'
+        : 'Focus: OFF (clicks will not unfocus other apps)'
     );
   });
 
   // Attach Screen Button
   snapBtn.addEventListener('click', async () => {
     snapBtn.disabled = true;
-    snapBtn.textContent = '⏳ Attaching...';
+    snapBtn.textContent = 'Attaching...';
     try {
       const dataUrl = await ipcRenderer.invoke('take-screenshot');
       const settings = await ipcRenderer.invoke('get-settings');
@@ -771,20 +775,20 @@ function injectStealthHeader() {
         await uploadScreenshotToGemini(dataUrl);
         await new Promise((r) => setTimeout(r, 500));
         await injectPromptToGemini(settings.prompt);
-        showToast('✅ Attached! Press Ctrl+Enter to send.');
+        showToast('Attached! Press Ctrl+Enter to send.');
       }
     } finally {
       snapBtn.disabled = false;
-      snapBtn.textContent = '📸 Attach';
+      snapBtn.textContent = 'Capture';
     }
   });
 
   // Send Button
   sendBtn.addEventListener('click', async () => {
-    showToast('🚀 Sending...');
+    showToast('Sending...');
     const success = await submitGemini();
     if (success) {
-      showToast('✅ Sent to Gemini!');
+      showToast('Sent successfully!');
     }
   });
 
@@ -850,7 +854,7 @@ function openSettingsModal() {
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       ">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-          <h3 style="margin:0; font-size:15px; color:#60a5fa; font-weight:600;">UndecGPT Settings</h3>
+          <h3 style="margin:0; font-size:15px; color:#60a5fa; font-weight:600;">Glance AI Settings</h3>
           <button id="modal-close" style="background:none; border:none; color:#a1a1aa; cursor:pointer; font-size:16px;">✕</button>
         </div>
         
@@ -873,9 +877,9 @@ function openSettingsModal() {
         <label style="display:flex; align-items:flex-start; gap:8px; font-size:12px; margin-bottom:10px; cursor:pointer;">
           <input type="checkbox" id="modal-focusable" ${settings.focusable !== false ? 'checked' : ''} style="accent-color:#3b82f6; margin-top:2px;">
           <span>
-            <strong>Window Focusable Mode</strong><br>
+            <strong>Focus Mode</strong><br>
             <span style="color:#a1a1aa; font-size:11px;">
-              When unchecked, clicking on UndecGPT will NOT steal focus from other apps you are using.
+              When unchecked, clicking on Glance AI will NOT steal focus from other apps you are using.
             </span>
           </span>
         </label>

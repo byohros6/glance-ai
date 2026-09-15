@@ -52,3 +52,50 @@ Integrity mode: development
 - [ ] Automated test suite runs and passes cleanly via npm test.
 - [ ] Packaging script generates a standalone portable Windows .exe that launches and functions independently.
 - [ ] Git repository is initialized with clean commit history and proper .gitignore.
+
+## Follow-up — 2026-09-15T17:22:13Z
+
+Refactor and rebrand the desktop overlay into a clean, multi-provider AI desktop companion (supporting Google Gemini, OpenAI ChatGPT, Anthropic Claude, and Perplexity) named **Glance** (repo: `glance-desktop`), with minimal typography (no emoji clutter), literal "Focus Mode" and "Click-Through Mode" naming, and a unified provider selector.
+
+Working directory: `C:\Users\benoy\OneDrive\Documents\UndecGPT`
+
+## Requirements
+
+### R1. Clean Naming & Minimalist UI Styling
+- Revert all "Ghost Mode" naming to standard, literal **"Click-Through Mode"**.
+- Standardize **"Focus Mode"** across the dashboard, toolbar, settings, and toast notifications.
+- Remove emoji clutter from UI buttons, toolbar badges, and notifications across `dashboard.html`, `dashboard.js`, `preload.cjs`, `preload.js`, and `README.md`.
+- Name the application **Glance** (repository: `glance-desktop`).
+
+### R2. Multi-LLM Provider Architecture
+- Expand the core window navigation and session engine to support multiple web AI providers:
+  - Google Gemini (`https://gemini.google.com/app`)
+  - OpenAI ChatGPT (`https://chatgpt.com/`)
+  - Anthropic Claude (`https://claude.ai/`)
+  - Perplexity (`https://www.perplexity.ai/`)
+- In `store.js`, add `provider` setting defaulting to `'gemini'`.
+- In `dashboard.html` / `dashboard.js`, add an active provider selector allowing users to switch their companion AI.
+- In `main.js`, load the appropriate URL based on the selected provider when launching the overlay.
+- Keep session management clean and consistent with uniform Chrome User-Agent across all providers.
+
+### R3. Repository Branding & Documentation
+- Update `package.json` with `name: "glance"`, `productName: "Glance"`, `artifactName: "Glance-Portable.exe"`.
+- Update `README.md` to present Glance as a multi-model workspace HUD.
+
+## Acceptance Criteria
+
+### Interaction & UI
+- [ ] Toolbar and Dashboard display "Focus Mode" and "Click-Through Mode" with zero "ghost mode" references.
+- [ ] Emojis removed from major UI action buttons and badges.
+- [ ] Dashboard includes a clean provider selector dropdown/tabs for Gemini, ChatGPT, Claude, and Perplexity.
+- [ ] Switching providers updates the target overlay URL in store and launches the selected AI web app.
+
+### Verification & Tests
+- [ ] All automated test suites continue to pass cleanly (`npm test`).
+- [ ] Portable binary compiles cleanly as `Glance-Portable.exe`.
+
+## Follow-up — 2026-09-15T17:25:11Z
+
+User feedback on naming: The user prefers "Glance AI" (repository: "glance-ai", productName: "Glance AI", binary: "Glance-AI-Portable.exe"). Please ensure this exact branding is reflected across package.json, the dashboard title, README, and the compiled executable.
+
+

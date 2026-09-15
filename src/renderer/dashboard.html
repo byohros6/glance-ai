@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Undec</title>
+  <title>Glance AI</title>
   <style>
     :root {
       --bg-primary: #0e1015;
@@ -419,6 +419,22 @@
       text-align: right;
     }
 
+    .provider-select {
+      background: #090a0d;
+      border: 1px solid var(--border);
+      color: #93c5fd;
+      font-size: 11.5px;
+      font-family: var(--font-sans);
+      padding: 4px 8px;
+      border-radius: 5px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .provider-select:focus {
+      border-color: var(--border-focus);
+    }
+
     /* Switch */
     .switch {
       position: relative;
@@ -625,11 +641,11 @@
   <div class="titlebar">
     <div class="titlebar-brand">
       <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span>Undec</span>
+      <span>Glance AI</span>
       <span class="version-pill">v1.0</span>
     </div>
     <div class="titlebar-controls" style="-webkit-app-region: no-drag !important;">
-      <button id="btn-close" class="win-btn close" title="Close Undec" style="-webkit-app-region: no-drag !important;" onclick="if(window.undecgpt&&window.undecgpt.closeApp){window.undecgpt.closeApp();}else{window.close();}">✕</button>
+      <button id="btn-close" class="win-btn close" title="Close Glance AI" style="-webkit-app-region: no-drag !important;" onclick="const api=window.glanceai||window.undecgpt;if(api&&api.closeApp){api.closeApp();}else{window.close();}">✕</button>
     </div>
   </div>
 
@@ -638,7 +654,7 @@
     <!-- Clean Launch Banner -->
     <div class="launch-header">
       <div class="launch-info">
-        <h2>Gemini Heads-Up Overlay</h2>
+        <h2>AI Workspace Companion</h2>
         <p>An always-available companion that sits on top of your workspace without disrupting active windows. Return here anytime with <kbd style="background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:3px;">Ctrl + B</kbd> or the top menu.</p>
       </div>
       <div class="launch-actions" style="-webkit-app-region: no-drag !important;">
@@ -720,13 +736,28 @@
       <!-- Card: Interaction & Focus Modes -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Interaction & Focus Settings</span>
+          <span class="card-title">Companion & Focus Settings</span>
         </div>
 
         <div class="control-row">
           <div class="control-info">
-            <div class="control-label">Non-Intrusive Focus <kbd>Ctrl+F</kbd></div>
-            <div class="control-subtext">When OFF, interacting with the overlay will never steal focus or cursor state from your active IDE/app.</div>
+            <div class="control-label">AI Companion Provider</div>
+            <div class="control-subtext">Active AI model web service loaded inside the overlay</div>
+          </div>
+          <div>
+            <select id="select-provider" class="provider-select">
+              <option value="gemini">Google Gemini</option>
+              <option value="chatgpt">OpenAI ChatGPT</option>
+              <option value="claude">Anthropic Claude</option>
+              <option value="perplexity">Perplexity AI</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-info">
+            <div class="control-label">Focus Mode <kbd>Ctrl+F</kbd></div>
+            <div class="control-subtext">When enabled, interacting with overlay will not steal typing focus or active cursor from your IDE.</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-focusable">
@@ -736,7 +767,7 @@
 
         <div class="control-row">
           <div class="control-info">
-            <div class="control-label">Ghost Mode (Click-Through) <kbd>Ctrl+M</kbd></div>
+            <div class="control-label">Click-Through Mode <kbd>Ctrl+M</kbd></div>
             <div class="control-subtext">When ON, mouse clicks pass straight through the overlay into windows underneath.</div>
           </div>
           <label class="switch">
@@ -748,7 +779,7 @@
         <div class="control-row">
           <div class="control-info">
             <div class="control-label">Auto-Submit on Capture</div>
-            <div class="control-subtext">Automatically sends prompt to Gemini when <kbd>Ctrl+S</kbd> screenshot is captured.</div>
+            <div class="control-subtext">Automatically sends prompt to the AI when <kbd>Ctrl+S</kbd> workspace screenshot is captured.</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-autosubmit">
@@ -790,7 +821,7 @@
     </div>
 
     <div class="footer">
-      <span>Undec v1.0.0</span>
+      <span>Glance AI v1.0.0</span>
       <span id="footer-save-hint">Click "Save Settings" or use shortcuts</span>
     </div>
   </div>

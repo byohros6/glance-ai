@@ -22,6 +22,13 @@ if (!gotLock) {
   process.exit(0);
 }
 
+export const PROVIDER_URLS = {
+  gemini: 'https://gemini.google.com/app',
+  chatgpt: 'https://chatgpt.com/',
+  claude: 'https://claude.ai/',
+  perplexity: 'https://www.perplexity.ai/'
+};
+
 let mainWindow = null;
 let currentMode = 'dashboard'; // 'dashboard' or 'gemini'
 
@@ -76,11 +83,16 @@ export function launchGeminiOverlay() {
     mainWindow.setIgnoreMouseEvents(false);
   }
 
+  const provider = store.get('provider') || 'gemini';
+  const targetUrl = PROVIDER_URLS[provider] || PROVIDER_URLS.gemini;
+
   mainWindow.webContents.setUserAgent(CHROME_USER_AGENT);
-  mainWindow.loadURL('https://gemini.google.com/app', {
+  mainWindow.loadURL(targetUrl, {
     userAgent: CHROME_USER_AGENT
   });
 }
+
+export const launchOverlay = launchGeminiOverlay;
 
 function toggleDashboard() {
   if (currentMode === 'gemini') {
@@ -103,7 +115,7 @@ function createWindow() {
     hasShadow: true,
     resizable: true,
     movable: true,
-    title: 'Undec',
+    title: 'Glance AI',
     backgroundColor: '#0d0f14',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.cjs'),
@@ -309,6 +321,11 @@ ipcMain.handle('set-click-through', (_event, enabled) => {
 });
 
 ipcMain.handle('launch-gemini', () => {
+  launchGeminiOverlay();
+  return true;
+});
+
+ipcMain.handle('launch-overlay', () => {
   launchGeminiOverlay();
   return true;
 });

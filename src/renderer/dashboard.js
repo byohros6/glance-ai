@@ -7,12 +7,12 @@ const PROMPT_PRESETS = {
 };
 
 const SHORTCUT_METADATA = [
-  { id: 'screenshot', name: 'Capture Context', desc: 'Captures screen workspace and attaches to Gemini', default: 'CommandOrControl+S' },
-  { id: 'send', name: 'Send to Gemini', desc: 'Submits prompt and workspace capture to Gemini', default: 'CommandOrControl+Return' },
-  { id: 'returnHome', name: 'Return to Dashboard', desc: 'Toggles between Gemini overlay and this Dashboard', default: 'CommandOrControl+B' },
+  { id: 'screenshot', name: 'Capture Context', desc: 'Captures screen workspace and attaches to active AI', default: 'CommandOrControl+S' },
+  { id: 'send', name: 'Send Message', desc: 'Submits prompt and workspace capture to AI companion', default: 'CommandOrControl+Return' },
+  { id: 'returnHome', name: 'Return to Dashboard', desc: 'Toggles between AI overlay and this Dashboard', default: 'CommandOrControl+B' },
   { id: 'toggleVisibility', name: 'Toggle Visibility', desc: 'Silently toggles overlay on or off', default: 'CommandOrControl+H' },
-  { id: 'toggleFocus', name: 'Non-Intrusive Focus', desc: 'When OFF, clicking overlay will not steal focus from active windows', default: 'CommandOrControl+F' },
-  { id: 'toggleClickThrough', name: 'Ghost Mode', desc: 'When ON, mouse clicks pass through overlay to underlying apps', default: 'CommandOrControl+M' },
+  { id: 'toggleFocus', name: 'Focus Mode', desc: 'When enabled, clicking overlay will not steal focus from active windows', default: 'CommandOrControl+F' },
+  { id: 'toggleClickThrough', name: 'Click-Through Mode', desc: 'When ON, mouse clicks pass through overlay to underlying apps', default: 'CommandOrControl+M' },
   { id: 'moveUp', name: 'Move Up', desc: 'Nudges window up by 40px', default: 'CommandOrControl+Up' },
   { id: 'moveDown', name: 'Move Down', desc: 'Nudges window down by 40px', default: 'CommandOrControl+Down' },
   { id: 'moveLeft', name: 'Move Left', desc: 'Nudges window left by 40px', default: 'CommandOrControl+Left' },
@@ -21,7 +21,7 @@ const SHORTCUT_METADATA = [
   { id: 'scrollDown', name: 'Scroll Chat Down', desc: 'Scrolls chat history downwards', default: 'CommandOrControl+Shift+Down' },
   { id: 'opacityDown', name: 'Decrease Opacity', desc: 'Dims window by 10%', default: 'CommandOrControl+[' },
   { id: 'opacityUp', name: 'Increase Opacity', desc: 'Brightens window by 10%', default: 'CommandOrControl+]' },
-  { id: 'emergencyExit', name: 'Exit App', desc: 'Closes Undec immediately', default: 'CommandOrControl+Shift+Q' }
+  { id: 'emergencyExit', name: 'Exit App', desc: 'Closes Glance AI immediately', default: 'CommandOrControl+Shift+Q' }
 ];
 
 let currentSettings = {};
@@ -95,24 +95,26 @@ function updateLivePreview(width, height) {
 }
 
 async function init() {
-  if (!window.undecgpt) {
-    console.error('undecgpt API not available');
+  const api = window.glanceai || window.undecgpt;
+  if (!api) {
+    console.error('Glance AI API not available');
     return;
   }
 
   try {
-    currentSettings = await window.undecgpt.getSettings();
+    currentSettings = await api.getSettings();
   } catch (e) {
     console.error('Failed to get settings:', e);
     currentSettings = {};
   }
 
+  const selectProvider = document.getElementById('select-provider');
   const inputWidth = document.getElementById('input-width');
   const numWidth = document.getElementById('num-width');
   const inputHeight = document.getElementById('input-height');
   const numHeight = document.getElementById('num-height');
   const inputOpacity = document.getElementById('input-opacity');
-  const valOpacity = document.getElementById('val-opacity');
+  const valOpacity = document.getElementById('val-display');
   const toggleFocusable = document.getElementById('toggle-focusable');
   const toggleClickthrough = document.getElementById('toggle-clickthrough');
   const toggleAutoSubmit = document.getElementById('toggle-autosubmit');
@@ -121,6 +123,14 @@ async function init() {
   const btnTestSize = document.getElementById('btn-test-size');
   const btnSaveSettings = document.getElementById('btn-save-settings');
   const btnSaveText = document.getElementById('btn-save-text');
+
+  if (selectProvider) {
+    selectProvider.value = currentSettings.provider || 'gemini';
+    selectProvider.addEventListener('change', (e) => {
+      api.saveSettings({ provider: e.target.value });
+      showToast('Active provider set to ' + e.target.options[e.target.selectedIndex].text);
+    });
+  }
 
   const w = currentSettings.windowWidth || 520;
   const h = currentSettings.windowHeight || 650;
@@ -131,7 +141,7 @@ async function init() {
   inputHeight.value = h;
   numHeight.value = h;
   inputOpacity.value = op;
-  valOpacity.textContent = Math.round(op * 100) + '%';
+  if (valOpacity) valOpacity.textContent = Math.round(op * 100) + '%';
 
   toggleFocusable.checked = currentSettings.focusable !== false;
   toggleClickthrough.checked = !!currentSettings.clickThrough;
@@ -150,7 +160,7 @@ async function init() {
     inputWidth.value = val;
     numWidth.value = val;
     updateLivePreview(val, parseInt(inputHeight.value, 10));
-    window.undecgpt.saveSettings({ windowWidth: val });
+    api.saveSettings({ windowWidth: val });
   }
 
   inputWidth.addEventListener('input', (e) => {
@@ -169,7 +179,7 @@ async function init() {
     inputHeight.value = val;
     numHeight.value = val;
     updateLivePreview(parseInt(inputWidth.value, 10), val);
-    window.undecgpt.saveSettings({ windowHeight: val });
+    api.saveSettings({ windowHeight: val });
   }
 
   inputHeight.addEventListener('input', (e) => {
@@ -199,8 +209,8 @@ async function init() {
     btnTestSize.addEventListener('click', () => {
       const currentW = parseInt(inputWidth.value, 10);
       const currentH = parseInt(inputHeight.value, 10);
-      if (window.undecgpt.previewOverlaySize) {
-        window.undecgpt.previewOverlaySize(currentW, currentH);
+      if (api.previewOverlaySize) {
+        api.previewOverlaySize(currentW, currentH);
         showToast('Previewing ' + currentW + '×' + currentH + ' on monitor for 2s...');
       }
     });
@@ -216,21 +226,23 @@ async function init() {
       const currentClickThrough = toggleClickthrough.checked;
       const currentAutoSubmit = toggleAutoSubmit ? toggleAutoSubmit.checked : false;
       const currentPrompt = promptTextarea.value;
+      const currentProvider = selectProvider ? selectProvider.value : (currentSettings.provider || 'gemini');
 
       try {
-        const updated = await window.undecgpt.saveSettings({
+        const updated = await api.saveSettings({
           windowWidth: currentW,
           windowHeight: currentH,
           opacity: currentOp,
           focusable: currentFocus,
           clickThrough: currentClickThrough,
           autoSubmit: currentAutoSubmit,
-          prompt: currentPrompt
+          prompt: currentPrompt,
+          provider: currentProvider
         });
 
         if (updated) currentSettings = updated;
-        if (window.undecgpt.setFocusable) await window.undecgpt.setFocusable(currentFocus);
-        if (window.undecgpt.setClickThrough) await window.undecgpt.setClickThrough(currentClickThrough);
+        if (api.setFocusable) await api.setFocusable(currentFocus);
+        if (api.setClickThrough) await api.setClickThrough(currentClickThrough);
 
         btnSaveSettings.classList.add('saved');
         if (btnSaveText) btnSaveText.textContent = 'Saved!';
@@ -253,23 +265,23 @@ async function init() {
   // Opacity Slider
   inputOpacity.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
-    valOpacity.textContent = Math.round(val * 100) + '%';
-    window.undecgpt.saveSettings({ opacity: val });
+    if (valOpacity) valOpacity.textContent = Math.round(val * 100) + '%';
+    api.saveSettings({ opacity: val });
   });
 
   // Focusable Toggle
   toggleFocusable.addEventListener('change', (e) => {
     const checked = e.target.checked;
-    window.undecgpt.saveSettings({ focusable: checked });
-    window.undecgpt.setFocusable(checked);
-    showToast(checked ? 'Focusable enabled' : 'Non-Activating Focus enabled');
+    api.saveSettings({ focusable: checked });
+    api.setFocusable(checked);
+    showToast(checked ? 'Focus Mode ON' : 'Focus Mode non-intrusive');
   });
 
   // Click-Through Toggle
   toggleClickthrough.addEventListener('change', (e) => {
     const checked = e.target.checked;
-    window.undecgpt.saveSettings({ clickThrough: checked });
-    window.undecgpt.setClickThrough(checked);
+    api.saveSettings({ clickThrough: checked });
+    api.setClickThrough(checked);
     showToast(checked ? 'Click-Through ON' : 'Click-Through OFF');
   });
 
@@ -277,7 +289,7 @@ async function init() {
   if (toggleAutoSubmit) {
     toggleAutoSubmit.addEventListener('change', (e) => {
       const checked = e.target.checked;
-      window.undecgpt.saveSettings({ autoSubmit: checked });
+      api.saveSettings({ autoSubmit: checked });
       showToast(checked ? 'Auto-Submit on Capture ON' : 'Auto-Submit on Capture OFF');
     });
   }
@@ -286,7 +298,7 @@ async function init() {
   promptTextarea.addEventListener('input', (e) => {
     const text = e.target.value;
     promptCharCount.textContent = text.length + ' chars';
-    window.undecgpt.saveSettings({ prompt: text });
+    api.saveSettings({ prompt: text });
   });
 
   document.querySelectorAll('#prompt-presets button').forEach((btn) => {
@@ -295,7 +307,7 @@ async function init() {
       if (PROMPT_PRESETS[presetKey]) {
         promptTextarea.value = PROMPT_PRESETS[presetKey];
         promptCharCount.textContent = promptTextarea.value.length + ' chars';
-        window.undecgpt.saveSettings({ prompt: promptTextarea.value });
+        api.saveSettings({ prompt: promptTextarea.value });
         showToast('Applied ' + btn.textContent.trim() + ' template');
       }
     });
@@ -308,20 +320,22 @@ async function init() {
   const resetBtn = document.getElementById('btn-reset-shortcuts');
   if (resetBtn) {
     resetBtn.addEventListener('click', async () => {
-      if (window.undecgpt.resetShortcuts) {
-        currentSettings.shortcuts = await window.undecgpt.resetShortcuts();
+      if (api.resetShortcuts) {
+        currentSettings.shortcuts = await api.resetShortcuts();
         renderShortcuts();
         showToast('Hotkeys reset to defaults');
       }
     });
   }
 
-  // Launch Gemini Button
+  // Launch Overlay Button
   const launchBtn = document.getElementById('btn-launch-gemini');
   if (launchBtn) {
     launchBtn.addEventListener('click', () => {
-      if (window.undecgpt.launchGemini) {
-        window.undecgpt.launchGemini();
+      if (api.launchOverlay) {
+        api.launchOverlay();
+      } else if (api.launchGemini) {
+        api.launchGemini();
       }
     });
   }
@@ -332,8 +346,8 @@ async function init() {
     closeBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (window.undecgpt && window.undecgpt.closeApp) {
-        window.undecgpt.closeApp();
+      if (api && api.closeApp) {
+        api.closeApp();
       } else {
         window.close();
       }
@@ -351,8 +365,9 @@ function cancelActiveRecording() {
   badge.textContent = originalText;
   badge.classList.remove('listening');
   activeRecordingState = null;
-  if (window.undecgpt && window.undecgpt.resumeShortcuts) {
-    window.undecgpt.resumeShortcuts();
+  const api = window.glanceai || window.undecgpt;
+  if (api && api.resumeShortcuts) {
+    api.resumeShortcuts();
   }
 }
 
@@ -394,6 +409,8 @@ function renderShortcuts() {
 }
 
 function startRecording(actionId, btn, badge) {
+  const api = window.glanceai || window.undecgpt;
+
   // If clicking the same button currently in recording mode, toggle off / cancel
   if (activeRecordingState && activeRecordingState.actionId === actionId) {
     cancelActiveRecording();
@@ -413,8 +430,8 @@ function startRecording(actionId, btn, badge) {
   badge.classList.add('listening');
 
   // Pause global OS shortcuts so Electron doesn't consume keystrokes before Chromium
-  if (window.undecgpt && window.undecgpt.pauseShortcuts) {
-    window.undecgpt.pauseShortcuts();
+  if (api && api.pauseShortcuts) {
+    api.pauseShortcuts();
   }
 
   const onKeyDown = async (e) => {
@@ -452,12 +469,12 @@ function startRecording(actionId, btn, badge) {
     btn.textContent = 'Rebind';
     badge.classList.remove('listening');
 
-    if (window.undecgpt && window.undecgpt.updateShortcut) {
+    if (api && api.updateShortcut) {
       try {
-        const updated = await window.undecgpt.updateShortcut(actionId, acc);
+        const updated = await api.updateShortcut(actionId, acc);
         currentSettings.shortcuts = updated;
         badge.textContent = formatKey(acc);
-        showToast(`✅ Rebound to ${formatKey(acc)}`);
+        showToast(`Rebound to ${formatKey(acc)}`);
       } catch (err) {
         console.error('Failed to update shortcut:', err);
         badge.textContent = originalText;
@@ -467,8 +484,8 @@ function startRecording(actionId, btn, badge) {
       badge.textContent = formatKey(acc);
     }
 
-    if (window.undecgpt && window.undecgpt.resumeShortcuts) {
-      window.undecgpt.resumeShortcuts();
+    if (api && api.resumeShortcuts) {
+      api.resumeShortcuts();
     }
   };
 

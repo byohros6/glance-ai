@@ -1,22 +1,23 @@
-# Undec ⚡
+# Glance AI
 
-**An always-on-top, non-intrusive workspace companion for Google Gemini.**
+**An always-on-top, non-intrusive workspace companion for AI assistants.**
 
-Undec is a lightweight desktop heads-up display (HUD) that keeps Google Gemini directly over your active workspace. Designed for developers, researchers, and creators who want instant AI assistance without the friction of constant `Alt + Tab` context switching or losing window focus.
+Glance AI is a lightweight desktop heads-up display (HUD) that keeps your AI companion directly over your active workspace. Designed for developers, researchers, and creators who want instant AI assistance without the friction of constant `Alt + Tab` context switching or losing typing focus in their primary tools.
 
 ---
 
-## Why Undec?
+## Why Glance AI?
 
-When you're deep in your workflow—writing code, debugging, analyzing data, or reviewing designs—switching windows interrupts your momentum. Undec floats directly above your screen as a lightweight, semi-transparent assistant that never gets in your way.
+When you are deep in flow—writing code, debugging, analyzing data, or reviewing documents—switching windows breaks your concentration. Glance AI floats cleanly above your display as a lightweight, semi-transparent assistant that never interrupts your active work.
 
-- **Zero Alt-Tab Friction**: Gemini stays right where you need it. Check documentation, get architecture feedback, or review code snippets while keeping your eyes on your primary editor.
-- **Non-Intrusive Focus (`Ctrl + F`)**: Interacting with or reading the overlay never steals active input focus or active typing cursors away from your IDE, terminal, or browser. No lost cursor positions, no redundant re-focus clicks.
-- **Ghost Mode (`Ctrl + M`)**: Toggle click-through transparency to interact directly with the windows, terminals, or tools underneath the overlay without having to minimize it.
-- **Instant Workspace Capture (`Ctrl + S`)**: One keystroke captures your active screen workspace and cleanly attaches it to Gemini alongside your custom context prompt.
-- **Full Gemini Web Capabilities**: Directly embeds the official Google Gemini interface—access your full chat history, custom Gems, Gemini Advanced models, and code execution using your own Google account.
-- **Silent Keyboard Navigation**: Reposition the overlay across your screen (`Ctrl + Arrows`), scroll chat history (`Ctrl + Shift + Arrows`), adjust opacity (`Ctrl + [` / `]`), or toggle visibility (`Ctrl + H`) without touching your mouse.
-- **Customization Dashboard (`Ctrl + B`)**: Tailor default prompt templates, dimensions, transparency presets, and custom hotkey bindings to match your preferred desk setup.
+- **Zero Alt-Tab Friction**: Keep your AI companion right where you need it. Look up documentation, get architecture guidance, or review code snippets while keeping your eyes on your active editor.
+- **Focus Mode (`Ctrl + F`)**: Interacting with or reading the overlay never steals active input focus or active typing cursors away from your IDE, terminal, or browser. No lost cursor positions, no redundant re-focus clicks.
+- **Click-Through Mode (`Ctrl + M`)**: Allows mouse clicks to pass straight through the overlay to underlying windows, terminals, or documents without having to minimize or move the overlay.
+- **Multi-Provider Architecture**: Seamlessly switch between Google Gemini, OpenAI ChatGPT, Anthropic Claude, and Perplexity from the Settings Dashboard.
+- **Instant Workspace Capture (`Ctrl + S`)**: One keystroke captures your active screen workspace and cleanly attaches it to your AI companion alongside your custom prompt template.
+- **Full Web Capabilities**: Directly connects with official web interfaces—giving you access to your full chat history, custom models, and project spaces using your existing accounts.
+- **Silent Keyboard Navigation**: Reposition the overlay across your screen (`Ctrl + Arrows`), scroll conversation history (`Ctrl + Shift + Arrows`), adjust opacity (`Ctrl + [` / `]`), or toggle visibility (`Ctrl + H`) without touching your mouse.
+- **Configuration Dashboard (`Ctrl + B`)**: Tailor default prompt templates, window dimensions, opacity presets, active AI provider, and custom hotkey bindings to match your preferred setup.
 
 ---
 
@@ -24,17 +25,17 @@ When you're deep in your workflow—writing code, debugging, analyzing data, or 
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
-| **`Ctrl + S`** | **Capture Workspace** | Captures active screen context and attaches it to Gemini with your prompt |
-| **`Ctrl + Enter`** | **Send Message** | Sends your query and workspace capture to Gemini |
-| **`Ctrl + F`** | **Non-Intrusive Focus** | Toggles non-activating mode (interacting won't steal focus from other apps) |
-| **`Ctrl + M`** | **Ghost Mode** | Passes mouse clicks through the overlay to underlying windows |
+| **`Ctrl + S`** | **Capture Workspace** | Captures active screen context and attaches it with your prompt |
+| **`Ctrl + Enter`** | **Send Message** | Submits your query and workspace capture to your active AI companion |
+| **`Ctrl + F`** | **Focus Mode** | Toggles non-intrusive focus (interacting won't steal focus from active apps) |
+| **`Ctrl + M`** | **Click-Through Mode** | Passes mouse clicks through the overlay to underlying windows |
 | **`Ctrl + H`** | **Toggle Visibility** | Silently hides or shows the overlay |
 | **`Ctrl + B`** | **Dashboard Menu** | Opens the settings and keybinding configuration dashboard |
 | **`Ctrl + ↑ / ↓ / ← / →`** | **Nudge Window** | Moves the overlay 40px in any direction across your display |
-| **`Ctrl + Shift + ↑ / ↓`** | **Scroll History** | Scrolls Gemini conversation history up or down |
+| **`Ctrl + Shift + ↑ / ↓`** | **Scroll History** | Scrolls companion conversation history up or down |
 | **`Ctrl + [`** | **Decrease Opacity** | Dims overlay opacity by 10% (down to 15%) |
 | **`Ctrl + ]`** | **Increase Opacity** | Increases overlay opacity by 10% (up to 100%) |
-| **`Ctrl + Shift + Q`** | **Exit App** | Closes Undec immediately |
+| **`Ctrl + Shift + Q`** | **Exit App** | Closes Glance AI immediately |
 
 *All keybindings can be customized in the Settings Dashboard (`Ctrl + B`).*
 
@@ -45,7 +46,7 @@ When you're deep in your workflow—writing code, debugging, analyzing data, or 
 ### 1. Standalone Portable Executable (Recommended)
 No installation or runtime dependencies required. Download and run:
 ```
-dist/UndecGPT-Portable.exe
+dist/Glance-AI-Portable.exe
 ```
 
 ### 2. Running from Source
@@ -53,8 +54,8 @@ Ensure you have [Node.js](https://nodejs.org/) installed:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/UndecGPT.git
-cd UndecGPT
+git clone https://github.com/byohros6/glance-ai.git
+cd glance-ai
 
 # Install dependencies
 npm install
@@ -75,7 +76,7 @@ npm run dist
 
 ## Workspace Event Test Bench
 
-Undec includes a built-in browser diagnostic tool to verify that the overlay preserves your active editor focus and passes clicks through properly:
+Glance AI includes a built-in browser diagnostic tool to verify that the overlay preserves your active editor focus and passes clicks through properly:
 
 - Double-click **`open-test-bench.bat`**, or
 - Run `npm run test-bench`, or
@@ -87,7 +88,7 @@ The test bench provides real-time telemetry on window focus/blur events, click p
 
 ## Automated Test Suite
 
-Run the full automated test suite covering store persistence, window interactions, shortcut management, and OAuth routing:
+Run the full automated test suite covering store persistence, window interactions, shortcut management, and multi-provider routing:
 
 ```bash
 npm test
@@ -98,9 +99,9 @@ npm test
 ## Architecture Overview
 
 ```
-UndecGPT/
+glance-ai/
 ├── src/                          # Application Source
-│   ├── main/                     # Main process (window lifecycle, shortcuts, capture)
+│   ├── main/                     # Main process (window lifecycle, multi-provider routing, shortcuts)
 │   ├── preload/                  # Sandboxed bridge & UI toolbar
 │   └── renderer/                 # Glassmorphic settings dashboard
 │

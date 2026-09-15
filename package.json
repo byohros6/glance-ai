@@ -1,7 +1,7 @@
 {
-  "name": "undecgpt",
+  "name": "glance-ai",
   "version": "1.0.0",
-  "description": "A lightweight, always-on-top desktop productivity overlay powered by Google Gemini",
+  "description": "A lightweight, always-on-top workspace companion for AI assistants",
   "main": "src/main/main.js",
   "type": "module",
   "scripts": {
@@ -15,6 +15,9 @@
     "ai",
     "assistant",
     "gemini",
+    "chatgpt",
+    "claude",
+    "perplexity",
     "productivity",
     "overlay",
     "developer-tools",
@@ -27,8 +30,8 @@
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "com.undecgpt.app",
-    "productName": "UndecGPT",
+    "appId": "com.glanceai.app",
+    "productName": "Glance AI",
     "directories": {
       "output": "dist"
     },
@@ -39,7 +42,7 @@
     },
     "forceCodeSigning": false,
     "portable": {
-      "artifactName": "UndecGPT-Portable.exe"
+      "artifactName": "Glance-AI-Portable.exe"
     },
     "files": [
       "src/**/*",
