@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('undecgpt', {
   getAppMode: () => ipcRenderer.invoke('get-app-mode'),
   updateShortcut: (action, accelerator) => ipcRenderer.invoke('update-shortcut', { action, accelerator }),
   resetShortcuts: () => ipcRenderer.invoke('reset-shortcuts'),
+  previewOverlaySize: (width, height) => ipcRenderer.invoke('preview-overlay-size', { width, height }),
   onShortcutAction: (callback) => {
     ipcRenderer.on('shortcut-action', (_event, action, payload) => callback(action, payload));
   }

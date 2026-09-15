@@ -35,6 +35,7 @@ export function showDashboard() {
 
   mainWindow.setSize(840, 720);
   mainWindow.center();
+  mainWindow.setSkipTaskbar(false);
   mainWindow.setOpacity(1.0);
   mainWindow.setIgnoreMouseEvents(false);
   mainWindow.setFocusable(true);
@@ -97,14 +98,13 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    skipTaskbar: true,
-    type: 'toolbar', // Windows WS_EX_TOOLWINDOW: completely hides from taskbar and Alt+Tab
+    skipTaskbar: false, // Dashboard appears in taskbar like a normal app
     focusable: true,
-    hasShadow: false,
+    hasShadow: true,
     resizable: true,
     movable: true,
-    title: 'UndecGPT',
-    backgroundColor: '#00000000',
+    title: 'Undec',
+    backgroundColor: '#0d0f14',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       nodeIntegration: false,
@@ -231,7 +231,16 @@ ipcMain.handle('hide-window', () => {
 });
 
 ipcMain.handle('close-app', () => {
-  app.quit();
+  console.log('[Undec] close-app invoked, terminating process');
+  try {
+    globalShortcut.unregisterAll();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.destroy();
+    }
+  } catch (err) {
+    console.error('[Undec] Error closing window:', err);
+  }
+  app.exit(0);
 });
 
 ipcMain.handle('take-screenshot', async () => {
@@ -315,6 +324,21 @@ ipcMain.handle('reset-shortcuts', () => {
   store.set('shortcuts', { ...DEFAULT_SETTINGS.shortcuts });
   registerGlobalShortcuts(getMainWindow, toggleDashboard);
   return store.get('shortcuts');
+});
+
+ipcMain.handle('preview-overlay-size', async (_event, { width, height }) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const originalBounds = mainWindow.getBounds();
+  const w = Math.max(300, Math.min(1600, parseInt(width, 10) || 520));
+  const h = Math.max(300, Math.min(1400, parseInt(height, 10) || 650));
+  mainWindow.setSize(w, h);
+  mainWindow.center();
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && currentMode === 'dashboard') {
+      mainWindow.setBounds(originalBounds);
+    }
+  }, 2000);
+  return true;
 });
 
 
