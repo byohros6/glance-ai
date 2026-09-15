@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UndecGPT Event & Focus Test Bench</title>
+  <title>Glance AI Event & Focus Test Bench</title>
   <style>
     :root {
       --bg: #0b0f17;
@@ -516,7 +516,7 @@
       <div class="logo-area">
         <span class="logo-badge">DIAGNOSTIC BENCH</span>
         <div>
-          <h1>UndecGPT Focus & Event Monitor</h1>
+          <h1>Glance AI Focus & Event Monitor</h1>
           <div class="subtitle">Live browser telemetry to verify Non-Activating Focus (Ctrl+F) and Click-Through (Ctrl+M)</div>
         </div>
       </div>
@@ -584,23 +584,23 @@
     <!-- Verification Guide / Testing Flow -->
     <div class="test-guide">
       <div class="test-guide-title">
-        <span>🧪 How to Verify UndecGPT Stealth Features With This Bench</span>
+        <span>🧪 How to Verify Glance AI Stealth Features With This Bench</span>
       </div>
       <div class="test-steps">
         <div class="step-card">
           <div class="step-num">Test 1: Non-Activating Focus Mode (<span class="kbd">Ctrl + F</span>)</div>
           <div>1. Click inside the <strong>Typing Sandbox</strong> below so cursor is blinking.</div>
-          <div>2. Turn Focus <strong>OFF</strong> in UndecGPT (<span class="kbd">Ctrl + F</span>).</div>
-          <div>3. Click anywhere on UndecGPT.</div>
+          <div>2. Turn Focus <strong>OFF</strong> in Glance AI (<span class="kbd">Ctrl + F</span>).</div>
+          <div>3. Click anywhere on Glance AI.</div>
           <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Blur counter stays at 0! Cursor keeps blinking in Chrome without stealing focus.</div>
         </div>
 
         <div class="step-card">
           <div class="step-num">Test 2: Click-Through Mode (<span class="kbd">Ctrl + M</span>)</div>
-          <div>1. Drag UndecGPT directly on top of the <strong>Target Zone</strong> box below.</div>
+          <div>1. Drag Glance AI directly on top of the <strong>Target Zone</strong> box below.</div>
           <div>2. Press <span class="kbd">Ctrl + M</span> to enable Click-Through mode.</div>
-          <div>3. Click directly onto UndecGPT over the target zone.</div>
-          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Clicks pass completely through UndecGPT and trigger the target zone counter!</div>
+          <div>3. Click directly onto Glance AI over the target zone.</div>
+          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Clicks pass completely through Glance AI and trigger the target zone counter!</div>
         </div>
 
         <div class="step-card">
@@ -608,7 +608,7 @@
           <div>1. Focus this Chrome tab.</div>
           <div>2. Press <span class="kbd">Ctrl + S</span>.</div>
           <div>3. Check if Chrome's native "Save Page As" dialog pops up.</div>
-          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: UndecGPT captures the screen globally without interfering with browser file dialogs.</div>
+          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Glance AI captures the screen globally without interfering with browser file dialogs.</div>
         </div>
       </div>
     </div>
@@ -621,9 +621,9 @@
           <div class="panel-title">
             <span>⌨️</span> Typing Sandbox (Focus Loss Test Area)
           </div>
-          <span style="font-size: 11px; color: var(--text-muted);">Focus here and interact with UndecGPT</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Focus here and interact with Glance AI</span>
         </div>
-        <textarea id="typing-input" class="typing-box" placeholder="Click here and start typing... If UndecGPT steals focus, this box will blur and the red banner above will flash immediately."></textarea>
+        <textarea id="typing-input" class="typing-box" placeholder="Click here and start typing... If Glance AI steals focus, this box will blur and the red banner above will flash immediately."></textarea>
         <div class="typing-status">
           <span id="typing-last-key">Last Key: None</span>
           <span id="typing-count">Chars: 0</span>
@@ -639,8 +639,8 @@
           <span id="target-click-counter" style="font-size: 12px; font-weight: 600; color: #60a5fa;">Hits: 0</span>
         </div>
         <div id="target-zone" class="target-zone">
-          <div class="target-zone-title">PLACE UNDECGPT OVER THIS BOX</div>
-          <div class="target-zone-desc">With Click-Through ON (Ctrl+M), clicking on UndecGPT will punch through and register hits directly in this container.</div>
+          <div class="target-zone-title">PLACE GLANCE AI OVER THIS BOX</div>
+          <div class="target-zone-desc">With Click-Through ON (Ctrl+M), clicking on Glance AI will punch through and register hits directly in this container.</div>
         </div>
       </div>
     </div>
@@ -993,7 +993,7 @@
       }, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `undecgpt_focus_log_${Date.now()}.json`);
+      downloadAnchor.setAttribute('download', `glance_ai_focus_log_${Date.now()}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();

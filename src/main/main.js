@@ -291,7 +291,7 @@ ipcMain.handle('set-focusable', (_event, focusableVal) => {
     }
     store.set('focusable', focusableVal);
     mainWindow.webContents.send('action:focus-changed', focusableVal);
-    console.log(`[UndecGPT] Window focusable set to: ${focusableVal}`);
+    console.log(`[Glance AI] Window focusable set to: ${focusableVal}`);
   }
   return store.get('focusable');
 });
@@ -315,7 +315,7 @@ ipcMain.handle('set-click-through', (_event, enabled) => {
     } else {
       mainWindow.setIgnoreMouseEvents(false);
     }
-    console.log(`[UndecGPT] Click-through set to: ${enabled}`);
+    console.log(`[Glance AI] Click-through set to: ${enabled}`);
   }
   return enabled;
 });

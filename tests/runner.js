@@ -192,7 +192,7 @@ function runTestFile(testItem) {
 
 async function main() {
   console.log('\n===============================================================');
-  console.log('       UndecGPT Automated Test Suite (Tiers 1 - 4)             ');
+  console.log('       Glance AI Automated Test Suite (Tiers 1 - 4)             ');
   console.log('===============================================================\n');
 
   const results = [];

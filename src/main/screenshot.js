@@ -19,8 +19,8 @@ export function getIsCapturing() {
 
 /**
  * Captures the screen.
- * Because setContentProtection(true) is active on the UndecGPT window,
- * Windows automatically excludes the UndecGPT window from capture!
+ * Because setContentProtection(true) is active on the Glance AI window,
+ * Windows automatically excludes the Glance AI window from capture!
  * @returns {Promise<string|null>} Data URL of the captured screenshot.
  */
 export async function captureScreen() {

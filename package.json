@@ -9,7 +9,9 @@
     "test": "node tests/runner.js",
     "test:smoke": "electron test_smoke.js",
     "test-bench": "node tools/focus-tester/server.js",
-    "dist": "electron-builder --win portable"
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable",
+    "dist:installer": "electron-builder --win nsis"
   },
   "keywords": [
     "ai",
@@ -32,19 +34,31 @@
   "build": {
     "appId": "com.glanceai.app",
     "productName": "Glance AI",
-    "compression": "maximum",
+    "compression": "normal",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": [
+        "nsis",
         "portable"
       ]
     },
-    "forceCodeSigning": false,
-    "portable": {
-      "artifactName": "Glance-AI-Portable.exe"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "artifactName": "Glance-AI-Setup-${version}.${ext}",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Glance AI",
+      "runAfterFinish": true
     },
+    "portable": {
+      "artifactName": "Glance-AI-Portable.exe",
+      "unpackDirName": "GlanceAI-Portable"
+    },
+    "forceCodeSigning": false,
     "files": [
       "src/**/*",
       "package.json"
