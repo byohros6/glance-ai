@@ -1,12 +1,5 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
-// Remove webdriver indicator to ensure seamless Google login
-try {
-  delete Object.getPrototypeOf(navigator).webdriver;
-} catch (e) {}
-try {
-  delete navigator.webdriver;
-} catch (e) {}
 
 // Expose API to renderer
 contextBridge.exposeInMainWorld('undecgpt', {
@@ -497,11 +490,22 @@ ipcRenderer.on('action:show-toast', (_event, payload) => {
   if (text) showToast(text, duration);
 });
 
-// Once DOM is ready, inject our custom stealth floating top bar (only on Gemini overlay, not Dashboard)
+// Once DOM is ready, inject our custom stealth floating top bar (strictly on Gemini overlay, never Dashboard or Google Accounts auth)
 function safeInjectHeader() {
-  if (typeof window !== 'undefined' && window.location && window.location.href.includes('dashboard.html')) {
+  if (typeof window === 'undefined' || !window.location) return;
+  const href = window.location.href || '';
+  const hostname = window.location.hostname || '';
+
+  // Do not inject on local dashboard or Google accounts authentication
+  if (href.includes('dashboard.html') || hostname.includes('accounts.google.com')) {
     return;
   }
+
+  // Only inject toolbar on Gemini app or local test mock
+  if (!hostname.includes('gemini.google.com') && !href.includes('gemini_mock.html')) {
+    return;
+  }
+
   if (document.getElementById('undecgpt-toolbar')) return;
   if (!document.body) {
     document.addEventListener('DOMContentLoaded', () => injectStealthHeader(), { once: true });

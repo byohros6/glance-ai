@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 
 const CHROME_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+const FIREFOX_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0';
 
 app.userAgentFallback = CHROME_USER_AGENT;
 
@@ -120,9 +122,17 @@ function createWindow() {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
+          width: 520,
+          height: 680,
+          center: true,
           alwaysOnTop: true,
           frame: true,
-          autoHideMenuBar: true
+          autoHideMenuBar: true,
+          backgroundColor: '#ffffff',
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+          }
         }
       };
     }
@@ -157,10 +167,29 @@ function createWindow() {
 
 // App lifecycle
 app.whenReady().then(() => {
-  // Override User-Agent headers on all outgoing web requests
+  // Dynamic header routing: route Google accounts authentication through Firefox UA to prevent "This browser or app may not be secure" block
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['User-Agent'] = CHROME_USER_AGENT;
+    const isGoogleAuth = details.url.includes('accounts.google.com');
+    if (isGoogleAuth) {
+      details.requestHeaders['User-Agent'] = FIREFOX_USER_AGENT;
+      delete details.requestHeaders['sec-ch-ua'];
+      delete details.requestHeaders['sec-ch-ua-mobile'];
+      delete details.requestHeaders['sec-ch-ua-platform'];
+    } else {
+      details.requestHeaders['User-Agent'] = CHROME_USER_AGENT;
+    }
     callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+
+  // Dynamically synchronize webContents userAgent so navigator.userAgent matches during auth flow
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('did-start-navigation', (_e, url) => {
+      if (url.includes('accounts.google.com')) {
+        contents.setUserAgent(FIREFOX_USER_AGENT);
+      } else if (url.includes('gemini.google.com') || url.includes('google.com')) {
+        contents.setUserAgent(CHROME_USER_AGENT);
+      }
+    });
   });
 
   createWindow();

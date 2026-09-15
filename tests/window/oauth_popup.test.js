@@ -94,6 +94,46 @@ suite.test('OAuth popup interaction preserves overlay setContentProtection statu
   }
 });
 
+suite.test('Google login headers route through Firefox UA without client hints', async () => {
+  const FIREFOX_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0';
+  const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+
+  const mockHeaderFilter = (details) => {
+    const isGoogleAuth = details.url.includes('accounts.google.com');
+    const headers = { ...details.requestHeaders };
+    if (isGoogleAuth) {
+      headers['User-Agent'] = FIREFOX_UA;
+      delete headers['sec-ch-ua'];
+      delete headers['sec-ch-ua-mobile'];
+      delete headers['sec-ch-ua-platform'];
+    } else {
+      headers['User-Agent'] = CHROME_UA;
+    }
+    return headers;
+  };
+
+  // 1. Check Google Auth routing
+  const authHeaders = mockHeaderFilter({
+    url: 'https://accounts.google.com/ServiceLogin',
+    requestHeaders: {
+      'User-Agent': 'Old',
+      'sec-ch-ua': '"Not A(Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"'
+    }
+  });
+  assert.strictEqual(authHeaders['User-Agent'], FIREFOX_UA, 'Google accounts must use Firefox UA');
+  assert.strictEqual(authHeaders['sec-ch-ua'], undefined, 'sec-ch-ua must be stripped on accounts.google.com');
+  assert.strictEqual(authHeaders['sec-ch-ua-mobile'], undefined, 'sec-ch-ua-mobile must be stripped');
+
+  // 2. Check Gemini routing
+  const geminiHeaders = mockHeaderFilter({
+    url: 'https://gemini.google.com/app',
+    requestHeaders: { 'User-Agent': 'Old' }
+  });
+  assert.strictEqual(geminiHeaders['User-Agent'], CHROME_UA, 'Gemini app must use Chrome UA');
+});
+
 app.whenReady().then(async () => {
   try {
     const success = await suite.run();
