@@ -552,12 +552,24 @@
       color: #e5e7eb;
     }
 
+    .key-badge.listening {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #fca5a5;
+      animation: pulse-badge 1s infinite alternate;
+    }
+
+    @keyframes pulse-badge {
+      from { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
+      to { border-color: rgba(239, 68, 68, 0.9); background: rgba(239, 68, 68, 0.25); }
+    }
+
     .rebind-btn {
-      background: transparent;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: var(--text-muted);
       border-radius: 4px;
-      padding: 2px 6px;
+      padding: 3px 8px;
       font-size: 10px;
       margin-left: 6px;
       cursor: pointer;
@@ -565,14 +577,15 @@
     }
 
     .rebind-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.1);
       color: #fff;
     }
 
     .rebind-btn.recording {
-      background: var(--danger);
-      color: #fff;
-      border-color: var(--danger);
+      background: #ef4444 !important;
+      color: #fff !important;
+      border-color: #ef4444 !important;
+      font-weight: 500;
     }
 
     .footer {
@@ -616,7 +629,6 @@
       <span class="version-pill">v1.0</span>
     </div>
     <div class="titlebar-controls" style="-webkit-app-region: no-drag !important;">
-      <button id="btn-minimize" class="win-btn" title="Minimize" style="-webkit-app-region: no-drag !important;" onclick="if(window.undecgpt&&window.undecgpt.hideWindow){window.undecgpt.hideWindow();}">─</button>
       <button id="btn-close" class="win-btn close" title="Close Undec" style="-webkit-app-region: no-drag !important;" onclick="if(window.undecgpt&&window.undecgpt.closeApp){window.undecgpt.closeApp();}else{window.close();}">✕</button>
     </div>
   </div>

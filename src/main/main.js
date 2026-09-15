@@ -326,6 +326,16 @@ ipcMain.handle('reset-shortcuts', () => {
   return store.get('shortcuts');
 });
 
+ipcMain.handle('pause-shortcuts', () => {
+  globalShortcut.unregisterAll();
+  return true;
+});
+
+ipcMain.handle('resume-shortcuts', () => {
+  registerGlobalShortcuts(getMainWindow, toggleDashboard);
+  return true;
+});
+
 ipcMain.handle('preview-overlay-size', async (_event, { width, height }) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
   const originalBounds = mainWindow.getBounds();

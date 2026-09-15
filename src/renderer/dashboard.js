@@ -25,7 +25,7 @@ const SHORTCUT_METADATA = [
 ];
 
 let currentSettings = {};
-let activeRecordingId = null;
+let activeRecordingState = null;
 
 function formatKey(acc) {
   if (!acc) return 'Unset';
@@ -339,16 +339,20 @@ async function init() {
       }
     };
   }
+}
 
-  const minBtn = document.getElementById('btn-minimize');
-  if (minBtn) {
-    minBtn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (window.undecgpt && window.undecgpt.hideWindow) {
-        window.undecgpt.hideWindow();
-      }
-    };
+function cancelActiveRecording() {
+  if (!activeRecordingState) return;
+  const { btn, badge, originalText, onKeyDown, onWindowClick } = activeRecordingState;
+  window.removeEventListener('keydown', onKeyDown, true);
+  window.removeEventListener('mousedown', onWindowClick, true);
+  btn.classList.remove('recording');
+  btn.textContent = 'Rebind';
+  badge.textContent = originalText;
+  badge.classList.remove('listening');
+  activeRecordingState = null;
+  if (window.undecgpt && window.undecgpt.resumeShortcuts) {
+    window.undecgpt.resumeShortcuts();
   }
 }
 
@@ -375,7 +379,10 @@ function renderShortcuts() {
     const rebindBtn = document.createElement('button');
     rebindBtn.className = 'rebind-btn';
     rebindBtn.textContent = 'Rebind';
-    rebindBtn.onclick = () => startRecording(meta.id, rebindBtn, keyBadge);
+    rebindBtn.onclick = (e) => {
+      e.stopPropagation();
+      startRecording(meta.id, rebindBtn, keyBadge);
+    };
 
     keyTd.appendChild(keyBadge);
     keyTd.appendChild(rebindBtn);
@@ -387,33 +394,98 @@ function renderShortcuts() {
 }
 
 function startRecording(actionId, btn, badge) {
-  if (activeRecordingId) return;
-  activeRecordingId = actionId;
+  // If clicking the same button currently in recording mode, toggle off / cancel
+  if (activeRecordingState && activeRecordingState.actionId === actionId) {
+    cancelActiveRecording();
+    showToast('Rebind cancelled');
+    return;
+  }
+
+  // If another button was recording, cancel it first
+  if (activeRecordingState) {
+    cancelActiveRecording();
+  }
+
+  const originalText = badge.textContent;
   btn.classList.add('recording');
-  btn.textContent = 'Press Keys...';
-  badge.textContent = 'Listening...';
+  btn.textContent = 'Cancel';
+  badge.textContent = 'Press keys...';
+  badge.classList.add('listening');
+
+  // Pause global OS shortcuts so Electron doesn't consume keystrokes before Chromium
+  if (window.undecgpt && window.undecgpt.pauseShortcuts) {
+    window.undecgpt.pauseShortcuts();
+  }
 
   const onKeyDown = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // Escape cancels recording
+    if (e.key === 'Escape') {
+      cancelActiveRecording();
+      showToast('Rebind cancelled');
+      return;
+    }
+
+    // Ignore pure modifier keys (user is currently holding Ctrl/Alt/Shift)
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+      return;
+    }
+
     const acc = eventToAccelerator(e);
     if (!acc) return;
 
+    // Validate: single alphanumeric character without modifier is prevented
+    const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
+    const isFunctionKey = /^F([1-9]|1[0-9]|2[0-4])$/i.test(e.key);
+    if (!hasModifier && !isFunctionKey) {
+      showToast('Please include Ctrl or Alt (e.g. Ctrl + ' + (e.key.length === 1 ? e.key.toUpperCase() : e.key) + ')');
+      return;
+    }
+
     window.removeEventListener('keydown', onKeyDown, true);
-    activeRecordingId = null;
+    window.removeEventListener('mousedown', onWindowClick, true);
+    activeRecordingState = null;
+
     btn.classList.remove('recording');
     btn.textContent = 'Rebind';
+    badge.classList.remove('listening');
 
     if (window.undecgpt && window.undecgpt.updateShortcut) {
-      const updated = await window.undecgpt.updateShortcut(actionId, acc);
-      currentSettings.shortcuts = updated;
+      try {
+        const updated = await window.undecgpt.updateShortcut(actionId, acc);
+        currentSettings.shortcuts = updated;
+        badge.textContent = formatKey(acc);
+        showToast(`✅ Rebound to ${formatKey(acc)}`);
+      } catch (err) {
+        console.error('Failed to update shortcut:', err);
+        badge.textContent = originalText;
+        showToast('Failed to register shortcut');
+      }
+    } else {
       badge.textContent = formatKey(acc);
-      showToast(`Hotkey updated to ${formatKey(acc)}`);
+    }
+
+    if (window.undecgpt && window.undecgpt.resumeShortcuts) {
+      window.undecgpt.resumeShortcuts();
     }
   };
 
+  const onWindowClick = (e) => {
+    if (e.target !== btn && !btn.contains(e.target)) {
+      cancelActiveRecording();
+    }
+  };
+
+  activeRecordingState = { actionId, btn, badge, originalText, onKeyDown, onWindowClick };
+
   window.addEventListener('keydown', onKeyDown, true);
+  setTimeout(() => {
+    if (activeRecordingState && activeRecordingState.actionId === actionId) {
+      window.addEventListener('mousedown', onWindowClick, true);
+    }
+  }, 100);
 }
 
 if (document.readyState === 'loading') {
