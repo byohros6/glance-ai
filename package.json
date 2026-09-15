@@ -8,6 +8,7 @@
     "start": "electron .",
     "test": "node tests/runner.js",
     "test:smoke": "electron test_smoke.js",
+    "test-bench": "node tools/focus-tester/server.js",
     "dist": "electron-builder --win portable"
   },
   "keywords": [

@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UndecGPT Event & Focus Test Bench</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card-bg: #131b28;
+      --border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.25);
+      --blue: #3b82f6;
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+
+    .btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Live Status Banner */
+    .status-banner {
+      padding: 20px 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .status-banner.focused {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--green);
+      box-shadow: 0 0 30px var(--green-glow);
+    }
+
+    .status-banner.blurred {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: var(--red);
+      box-shadow: 0 0 30px var(--red-glow);
+    }
+
+    .status-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-indicator {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .status-banner.focused .status-indicator {
+      background: var(--green);
+      box-shadow: 0 0 12px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .status-banner.blurred .status-indicator {
+      background: var(--red);
+      box-shadow: 0 0 12px var(--red);
+      animation: flash 0.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.8; }
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .status-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .status-banner.focused .status-title {
+      color: #34d399;
+    }
+
+    .status-banner.blurred .status-title {
+      color: #f87171;
+    }
+
+    /* Grid Layout */
+    .grid-dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Interactive Test Zones */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Typing Sandbox */
+    .typing-box {
+      width: 100%;
+      height: 120px;
+      background: #0b0f17;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 13px;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .typing-box:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .typing-status {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Click Target Zone */
+    .target-zone {
+      flex: 1;
+      min-height: 120px;
+      background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+      border: 2px dashed #3b82f6;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: crosshair;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.15s ease;
+    }
+
+    .target-zone:hover {
+      background: radial-gradient(circle at center, rgba(59, 130, 246, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border-color: #60a5fa;
+    }
+
+    .target-zone:active {
+      transform: scale(0.99);
+      border-color: #10b981;
+    }
+
+    .target-zone-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #93c5fd;
+      pointer-events: none;
+    }
+
+    .target-zone-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      max-width: 320px;
+      pointer-events: none;
+    }
+
+    .click-ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.4);
+      transform: scale(0);
+      animation: ripple 0.5s linear;
+      pointer-events: none;
+    }
+
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* Instructions / Verification Checklist */
+    .test-guide {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+    }
+
+    .test-guide-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .test-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      font-size: 12px;
+    }
+
+    .step-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .step-num {
+      color: #60a5fa;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .kbd {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #f1f5f9;
+    }
+
+    /* Event Audit Log Table */
+    .log-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .log-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .filter-item input {
+      accent-color: var(--blue);
+    }
+
+    .log-table-wrap {
+      max-height: 360px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #070a0f;
+    }
+
+    table.log-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      text-align: left;
+    }
+
+    table.log-table th {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    table.log-table td {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+    }
+
+    table.log-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-blur { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-focus { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-key { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-click { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-vis { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4); }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-area">
+        <span class="logo-badge">DIAGNOSTIC BENCH</span>
+        <div>
+          <h1>UndecGPT Focus & Event Monitor</h1>
+          <div class="subtitle">Live browser telemetry to verify Non-Activating Focus (Ctrl+F) and Click-Through (Ctrl+M)</div>
+        </div>
+      </div>
+      <div class="header-controls">
+        <button id="btn-sound" class="btn" title="Synthesize audio tones on focus loss/gain">
+          🔊 Audio Alert: OFF
+        </button>
+        <button id="btn-export" class="btn">
+          📥 Export Log
+        </button>
+        <button id="btn-clear" class="btn btn-danger">
+          🗑️ Clear Counters & Log
+        </button>
+      </div>
+    </header>
+
+    <!-- Top Focus Status Banner -->
+    <div id="status-banner" class="status-banner focused">
+      <div class="status-main">
+        <div class="status-indicator"></div>
+        <div>
+          <div id="status-title" class="status-title">WINDOW FOCUSED</div>
+          <div id="status-desc" class="status-desc">Chrome currently holds OS active input focus. Keystrokes and events are received by this browser tab.</div>
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 500;">Active Element</div>
+        <div id="active-element-display" style="font-family: monospace; font-size: 13px; color: #93c5fd; font-weight: 600;">BODY</div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Metrics -->
+    <div class="grid-dashboard">
+      <div class="metric-card">
+        <div class="metric-label">Focus Losses (Blurs)</div>
+        <div id="metric-blurs" class="metric-value" style="color: #ef4444;">0</div>
+        <div class="metric-sub">Times another window stole focus</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Focus Regained</div>
+        <div id="metric-focuses" class="metric-value" style="color: #10b981;">0</div>
+        <div class="metric-sub">Times this tab regained focus</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Keystrokes Received</div>
+        <div id="metric-keys" class="metric-value" style="color: #3b82f6;">0</div>
+        <div class="metric-sub">Keydown events caught by Chrome</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Clicks Received</div>
+        <div id="metric-clicks" class="metric-value" style="color: #f59e0b;">0</div>
+        <div class="metric-sub">Mouse clicks hitting this document</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-label">Time Unfocused</div>
+        <div id="metric-unfocused-time" class="metric-value" style="color: #cbd5e1;">0.0s</div>
+        <div class="metric-sub">Total time Chrome was in background</div>
+      </div>
+    </div>
+
+    <!-- Verification Guide / Testing Flow -->
+    <div class="test-guide">
+      <div class="test-guide-title">
+        <span>🧪 How to Verify UndecGPT Stealth Features With This Bench</span>
+      </div>
+      <div class="test-steps">
+        <div class="step-card">
+          <div class="step-num">Test 1: Non-Activating Focus Mode (<span class="kbd">Ctrl + F</span>)</div>
+          <div>1. Click inside the <strong>Typing Sandbox</strong> below so cursor is blinking.</div>
+          <div>2. Turn Focus <strong>OFF</strong> in UndecGPT (<span class="kbd">Ctrl + F</span>).</div>
+          <div>3. Click anywhere on UndecGPT.</div>
+          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Blur counter stays at 0! Cursor keeps blinking in Chrome without stealing focus.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">Test 2: Click-Through Mode (<span class="kbd">Ctrl + M</span>)</div>
+          <div>1. Drag UndecGPT directly on top of the <strong>Target Zone</strong> box below.</div>
+          <div>2. Press <span class="kbd">Ctrl + M</span> to enable Click-Through mode.</div>
+          <div>3. Click directly onto UndecGPT over the target zone.</div>
+          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: Clicks pass completely through UndecGPT and trigger the target zone counter!</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">Test 3: Hotkey Interception (<span class="kbd">Ctrl + S</span>)</div>
+          <div>1. Focus this Chrome tab.</div>
+          <div>2. Press <span class="kbd">Ctrl + S</span>.</div>
+          <div>3. Check if Chrome's native "Save Page As" dialog pops up.</div>
+          <div style="margin-top: 4px; color: #34d399; font-weight: 500;">✓ Pass: UndecGPT captures the screen globally without interfering with browser file dialogs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Panels -->
+    <div class="main-grid">
+      <!-- Typing Sandbox -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>⌨️</span> Typing Sandbox (Focus Loss Test Area)
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted);">Focus here and interact with UndecGPT</span>
+        </div>
+        <textarea id="typing-input" class="typing-box" placeholder="Click here and start typing... If UndecGPT steals focus, this box will blur and the red banner above will flash immediately."></textarea>
+        <div class="typing-status">
+          <span id="typing-last-key">Last Key: None</span>
+          <span id="typing-count">Chars: 0</span>
+        </div>
+      </div>
+
+      <!-- Click Target Zone -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🎯</span> Click-Through Target Zone
+          </div>
+          <span id="target-click-counter" style="font-size: 12px; font-weight: 600; color: #60a5fa;">Hits: 0</span>
+        </div>
+        <div id="target-zone" class="target-zone">
+          <div class="target-zone-title">PLACE UNDECGPT OVER THIS BOX</div>
+          <div class="target-zone-desc">With Click-Through ON (Ctrl+M), clicking on UndecGPT will punch through and register hits directly in this container.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Event Stream -->
+    <div class="log-section">
+      <div class="log-controls">
+        <div style="font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+          <span>📋</span> Real-Time Browser Event Stream
+        </div>
+        <div class="filter-group">
+          <label class="filter-item">
+            <input type="checkbox" id="filter-focus" checked> Focus/Blur
+          </label>
+          <label class="filter-item">
+            <input type="checkbox" id="filter-keys" checked> Keys
+          </label>
+          <label class="filter-item">
+            <input type="checkbox" id="filter-clicks" checked> Clicks
+          </label>
+          <label class="filter-item">
+            <input type="checkbox" id="filter-visibility" checked> Visibility
+          </label>
+        </div>
+      </div>
+
+      <div class="log-table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th style="width: 110px;">Time</th>
+              <th style="width: 100px;">Event</th>
+              <th style="width: 140px;">Target Element</th>
+              <th>Event Details / Context</th>
+            </tr>
+          </thead>
+          <tbody id="log-body">
+            <tr>
+              <td colspan="4" class="empty-state">Waiting for browser events... Focus, blur, click, or type to inspect live event telemetry.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State metrics
+    let blurCount = 0;
+    let focusCount = 0;
+    let keyCount = 0;
+    let clickCount = 0;
+    let targetHits = 0;
+    let soundEnabled = false;
+    let isWindowCurrentlyFocused = document.hasFocus();
+    let totalUnfocusedMs = 0;
+    let lastBlurTimestamp = null;
+    let unfocusedTimerInterval = null;
+
+    const eventLogs = [];
+
+    // DOM References
+    const statusBanner = document.getElementById('status-banner');
+    const statusTitle = document.getElementById('status-title');
+    const statusDesc = document.getElementById('status-desc');
+    const activeElementDisplay = document.getElementById('active-element-display');
+    const metricBlurs = document.getElementById('metric-blurs');
+    const metricFocuses = document.getElementById('metric-focuses');
+    const metricKeys = document.getElementById('metric-keys');
+    const metricClicks = document.getElementById('metric-clicks');
+    const metricUnfocusedTime = document.getElementById('metric-unfocused-time');
+    const typingInput = document.getElementById('typing-input');
+    const typingLastKey = document.getElementById('typing-last-key');
+    const typingCount = document.getElementById('typing-count');
+    const targetZone = document.getElementById('target-zone');
+    const targetClickCounter = document.getElementById('target-click-counter');
+    const logBody = document.getElementById('log-body');
+    const btnSound = document.getElementById('btn-sound');
+    const btnClear = document.getElementById('btn-clear');
+    const btnExport = document.getElementById('btn-export');
+
+    const filterFocus = document.getElementById('filter-focus');
+    const filterKeys = document.getElementById('filter-keys');
+    const filterClicks = document.getElementById('filter-clicks');
+    const filterVisibility = document.getElementById('filter-visibility');
+
+    // Web Audio Synthesizer for alerts
+    let audioCtx = null;
+    function playBeep(frequency, durationMs = 120, type = 'sine') {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + durationMs / 1000);
+      } catch (e) {
+        console.warn('Audio error:', e);
+      }
+    }
+
+    btnSound.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      btnSound.textContent = soundEnabled ? '🔊 Audio Alert: ON' : '🔈 Audio Alert: OFF';
+      btnSound.classList.toggle('active', soundEnabled);
+      if (soundEnabled) {
+        playBeep(880, 150, 'triangle');
+      }
+    });
+
+    function formatTime(date) {
+      const pad = (n, z = 2) => String(n).padStart(z, '0');
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
+    }
+
+    function addLogEntry(category, eventName, badgeClass, targetName, details) {
+      const now = new Date();
+      const entry = {
+        time: formatTime(now),
+        timestamp: now.getTime(),
+        category,
+        eventName,
+        badgeClass,
+        targetName,
+        details
+      };
+      eventLogs.unshift(entry);
+      if (eventLogs.length > 500) eventLogs.pop();
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const allowedCategories = {
+        focus: filterFocus.checked,
+        keys: filterKeys.checked,
+        clicks: filterClicks.checked,
+        visibility: filterVisibility.checked
+      };
+
+      const visible = eventLogs.filter((e) => allowedCategories[e.category] !== false);
+
+      if (visible.length === 0) {
+        logBody.innerHTML = `<tr><td colspan="4" class="empty-state">No matching events logged yet.</td></tr>`;
+        return;
+      }
+
+      const rowsHtml = visible.slice(0, 150).map((e) => `
+        <tr>
+          <td style="color:#94a3b8;">${e.time}</td>
+          <td><span class="badge ${e.badgeClass}">${e.eventName}</span></td>
+          <td style="color:#93c5fd;">${e.targetName}</td>
+          <td>${e.details}</td>
+        </tr>
+      `).join('');
+
+      logBody.innerHTML = rowsHtml;
+    }
+
+    [filterFocus, filterKeys, filterClicks, filterVisibility].forEach((el) => {
+      el.addEventListener('change', renderLogs);
+    });
+
+    function updateActiveElement() {
+      const el = document.activeElement;
+      let name = 'BODY';
+      if (el) {
+        name = el.tagName;
+        if (el.id) name += `#${el.id}`;
+        else if (el.className) name += `.${String(el.className).split(' ')[0]}`;
+      }
+      activeElementDisplay.textContent = name;
+    }
+
+    setInterval(updateActiveElement, 300);
+
+    // Focus & Blur Handlers
+    function handleWindowFocus(e) {
+      isWindowCurrentlyFocused = true;
+      focusCount++;
+      metricFocuses.textContent = focusCount;
+
+      statusBanner.className = 'status-banner focused';
+      statusTitle.textContent = 'WINDOW FOCUSED';
+      statusDesc.textContent = 'Chrome currently holds OS active input focus. Keystrokes and mouse events are received directly.';
+
+      if (lastBlurTimestamp) {
+        const diff = Date.now() - lastBlurTimestamp;
+        totalUnfocusedMs += diff;
+        metricUnfocusedTime.textContent = (totalUnfocusedMs / 1000).toFixed(1) + 's';
+        lastBlurTimestamp = null;
+      }
+      clearInterval(unfocusedTimerInterval);
+
+      playBeep(880, 120, 'sine'); // High tone on focus
+      addLogEntry('focus', 'FOCUS', 'badge-focus', 'window', 'Window gained focus from OS / another application');
+    }
+
+    function handleWindowBlur(e) {
+      isWindowCurrentlyFocused = false;
+      blurCount++;
+      metricBlurs.textContent = blurCount;
+
+      statusBanner.className = 'status-banner blurred';
+      statusTitle.textContent = 'WINDOW BLURRED (FOCUS LOST)';
+      statusDesc.textContent = 'WARNING: Chrome lost focus! An overlay or external window stole active focus.';
+
+      lastBlurTimestamp = Date.now();
+      clearInterval(unfocusedTimerInterval);
+      unfocusedTimerInterval = setInterval(() => {
+        if (lastBlurTimestamp) {
+          const current = totalUnfocusedMs + (Date.now() - lastBlurTimestamp);
+          metricUnfocusedTime.textContent = (current / 1000).toFixed(1) + 's';
+        }
+      }, 100);
+
+      playBeep(330, 220, 'sawtooth'); // Low alert tone on blur
+      addLogEntry('focus', 'BLUR', 'badge-blur', 'window', 'Window lost focus! (Focus was transferred to an external process or overlay)');
+    }
+
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('blur', handleWindowBlur);
+
+    // Visibility Change
+    document.addEventListener('visibilitychange', () => {
+      const state = document.visibilityState;
+      addLogEntry(
+        'visibility',
+        'VISIBILITY',
+        'badge-vis',
+        'document',
+        `Document visibility state changed to: <strong>${state}</strong>`
+      );
+    });
+
+    // Keystroke Tracking
+    window.addEventListener('keydown', (e) => {
+      keyCount++;
+      metricKeys.textContent = keyCount;
+
+      const mods = [];
+      if (e.ctrlKey) mods.push('Ctrl');
+      if (e.altKey) mods.push('Alt');
+      if (e.shiftKey) mods.push('Shift');
+      if (e.metaKey) mods.push('Win');
+      const combo = mods.length > 0 ? `${mods.join('+')}+${e.key.toUpperCase()}` : e.key;
+
+      typingLastKey.textContent = `Last Key: ${combo} (code: ${e.code})`;
+
+      let targetStr = e.target.tagName;
+      if (e.target.id) targetStr += `#${e.target.id}`;
+
+      addLogEntry(
+        'keys',
+        'KEYDOWN',
+        'badge-key',
+        targetStr,
+        `Key: <strong>${combo}</strong> (code: ${e.code}, which: ${e.which}, repeat: ${e.repeat})`
+      );
+    });
+
+    typingInput.addEventListener('input', () => {
+      typingCount.textContent = `Chars: ${typingInput.value.length}`;
+    });
+
+    // Mouse Click Tracking
+    window.addEventListener('click', (e) => {
+      clickCount++;
+      metricClicks.textContent = clickCount;
+
+      let targetStr = e.target.tagName;
+      if (e.target.id) targetStr += `#${e.target.id}`;
+      else if (e.target.className) targetStr += `.${String(e.target.className).split(' ')[0]}`;
+
+      addLogEntry(
+        'clicks',
+        'CLICK',
+        'badge-click',
+        targetStr,
+        `Coordinates: (${e.clientX}, ${e.clientY}) | Button: ${e.button === 0 ? 'Left' : e.button === 2 ? 'Right' : 'Middle'}`
+      );
+    });
+
+    // Target Zone Ripple & Hit Counter
+    targetZone.addEventListener('click', (e) => {
+      targetHits++;
+      targetClickCounter.textContent = `Hits: ${targetHits}`;
+
+      const rect = targetZone.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const ripple = document.createElement('span');
+      ripple.className = 'click-ripple';
+      ripple.style.left = `${x}px`;
+      ripple.style.top = `${y}px`;
+      ripple.style.width = '60px';
+      ripple.style.height = '60px';
+      ripple.style.marginLeft = '-30px';
+      ripple.style.marginTop = '-30px';
+      targetZone.appendChild(ripple);
+
+      setTimeout(() => ripple.remove(), 500);
+
+      playBeep(659, 80, 'sine');
+      addLogEntry('clicks', 'TARGET HIT', 'badge-focus', '#target-zone', `🎯 DIRECT HIT punched through overlay at (${x}, ${y})!`);
+    });
+
+    // Clear Button
+    btnClear.addEventListener('click', () => {
+      blurCount = 0;
+      focusCount = 0;
+      keyCount = 0;
+      clickCount = 0;
+      targetHits = 0;
+      totalUnfocusedMs = 0;
+      lastBlurTimestamp = null;
+      metricBlurs.textContent = '0';
+      metricFocuses.textContent = '0';
+      metricKeys.textContent = '0';
+      metricClicks.textContent = '0';
+      metricUnfocusedTime.textContent = '0.0s';
+      targetClickCounter.textContent = 'Hits: 0';
+      typingInput.value = '';
+      typingCount.textContent = 'Chars: 0';
+      typingLastKey.textContent = 'Last Key: None';
+      eventLogs.length = 0;
+      renderLogs();
+    });
+
+    // Export Log
+    btnExport.addEventListener('click', () => {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        summary: {
+          blurCount,
+          focusCount,
+          keyCount,
+          clickCount,
+          targetHits,
+          totalUnfocusedSeconds: (totalUnfocusedMs / 1000).toFixed(2)
+        },
+        logs: eventLogs
+      }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `undecgpt_focus_log_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    // Initial state setup
+    if (!document.hasFocus()) {
+      handleWindowBlur(null);
+    }
+  </script>
+</body>
+</html>
