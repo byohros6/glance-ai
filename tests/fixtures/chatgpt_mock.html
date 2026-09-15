@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ChatGPT Mock Page for Glance AI Testing</title>
+  <style>
+    body { font-family: sans-serif; background: #202123; color: #ececf1; margin: 0; padding: 20px; }
+    #prompt-textarea { min-height: 44px; padding: 8px 12px; background: #40414f; border-radius: 8px; border: 1px solid #565869; color: #fff; }
+    button { background: #19c37d; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h2>ChatGPT Mock Session</h2>
+  <div id="chat-container"></div>
+  <div class="input-area">
+    <button id="attach-btn" data-testid="attach-button" aria-label="Attach files">Attach</button>
+    <input type="file" id="chatgpt-file-input" style="display:none;" />
+    <div id="prompt-textarea" contenteditable="true" role="textbox" aria-label="Message ChatGPT"></div>
+    <button id="send-btn" data-testid="send-button" aria-label="Send prompt">Send</button>
+  </div>
+
+  <script>
+    window.__testEvents = {
+      pastedFile: null,
+      fileInputClicked: 0,
+      fileInjected: null,
+      editorInput: '',
+      sendClicked: 0,
+      enterKeyDownDispatched: 0
+    };
+
+    const attachBtn = document.getElementById('attach-btn');
+    const fileInput = document.getElementById('chatgpt-file-input');
+    const editor = document.getElementById('prompt-textarea');
+    const sendBtn = document.getElementById('send-btn');
+
+    attachBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('click', () => {
+      window.__testEvents.fileInputClicked++;
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        window.__testEvents.fileInjected = {
+          name: fileInput.files[0].name,
+          size: fileInput.files[0].size,
+          type: fileInput.files[0].type
+        };
+      }
+    });
+
+    editor.addEventListener('paste', (e) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        const f = e.clipboardData.files[0];
+        window.__testEvents.pastedFile = {
+          name: f.name,
+          size: f.size,
+          type: f.type
+        };
+      }
+    });
+
+    editor.addEventListener('input', () => {
+      window.__testEvents.editorInput = editor.innerText || editor.textContent;
+    });
+
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        window.__testEvents.enterKeyDownDispatched++;
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      window.__testEvents.sendClicked++;
+    });
+  </script>
+</body>
+</html>

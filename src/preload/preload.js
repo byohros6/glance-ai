@@ -1,6 +1,5 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
-
 // Expose API to renderer
 const glanceApi = {
   getSettings: () => ipcRenderer.invoke('get-settings'),
@@ -60,9 +59,11 @@ function waitForElement(selector, timeoutMs = 4000) {
   });
 }
 
-// Injects File into HTMLInputElement and dispatches input & change events
-function injectFileFromDataUrl(input, dataUrl, filename = 'screenshot.png') {
-  const [meta, b64] = dataUrl.split(',');
+// Convert base64 Data URL to standard File object
+function dataUrlToFile(dataUrl, filename = 'screenshot.png') {
+  const parts = dataUrl.split(',');
+  const meta = parts[0] || '';
+  const b64 = parts[1] || '';
   const mime = (meta.split(':')[1] || 'image/png').split(';')[0];
   const byteString = atob(b64);
   const ab = new ArrayBuffer(byteString.length);
@@ -70,12 +71,167 @@ function injectFileFromDataUrl(input, dataUrl, filename = 'screenshot.png') {
   for (let i = 0; i < byteString.length; i++) {
     ia[i] = byteString.charCodeAt(i);
   }
-  const file = new File([new Blob([ab], { type: mime })], filename, { type: mime });
+  const blob = new Blob([ab], { type: mime });
+  return new File([blob], filename, { type: mime });
+}
+
+// Injects File into HTMLInputElement and dispatches input & change events
+function injectFileFromDataUrl(input, dataUrl, filename = 'screenshot.png') {
+  if (!input) return false;
+  const file = dataUrlToFile(dataUrl, filename);
   const dt = new DataTransfer();
   dt.items.add(file);
   input.files = dt.files;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   input.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// Helper: synthetic clipboard paste of image blob directly into a DOM element
+function pasteImageBlob(target, dataUrl, filename = 'screenshot.png') {
+  if (!target) return false;
+  try {
+    const file = dataUrlToFile(dataUrl, filename);
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    if (typeof target.focus === 'function') target.focus();
+    const pasteEvent = new ClipboardEvent('paste', {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: dt
+    });
+    return target.dispatchEvent(pasteEvent);
+  } catch (err) {
+    console.warn('[GlanceAI] pasteImageBlob error:', err);
+    return false;
+  }
+}
+
+// Universal fallback: Synthesize clipboard paste event (new ClipboardEvent('paste'))
+// with standard PNG file blob on whichever active contenteditable or textarea currently has focus.
+function fallbackSyntheticPaste(dataUrl, filename = 'screenshot.png') {
+  try {
+    const file = dataUrlToFile(dataUrl, filename);
+    const dt = new DataTransfer();
+    dt.items.add(file);
+
+    let target = document.activeElement;
+    if (
+      !target ||
+      target === document.body ||
+      target === document.documentElement ||
+      (!target.isContentEditable &&
+        target.getAttribute('contenteditable') !== 'true' &&
+        target.tagName !== 'TEXTAREA' &&
+        target.tagName !== 'INPUT')
+    ) {
+      target =
+        document.querySelector('div[contenteditable="true"]#prompt-textarea') ||
+        document.querySelector('div.ProseMirror[contenteditable="true"]') ||
+        document.querySelector('rich-textarea .ql-editor') ||
+        document.querySelector('.ql-editor') ||
+        document.querySelector('[contenteditable="true"]') ||
+        document.querySelector('textarea') ||
+        document.querySelector('input:not([type="hidden"]):not([type="file"])') ||
+        document.body;
+    }
+
+    if (target) {
+      if (typeof target.focus === 'function') target.focus();
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dt
+      });
+      target.dispatchEvent(pasteEvent);
+      console.log('[GlanceAI] Universal fallback synthetic paste dispatched on', target.tagName, target.id || target.className || '');
+      return true;
+    }
+  } catch (err) {
+    console.warn('[GlanceAI] Universal fallback error:', err);
+  }
+  return false;
+}
+
+// Provider detection engine across Gemini, ChatGPT, Claude, and Perplexity
+function detectActiveProvider(urlOrHostname = '', doc = (typeof document !== 'undefined' ? document : null)) {
+  const loc = typeof window !== 'undefined' && window.location ? window.location : null;
+  const target = (urlOrHostname || (loc ? loc.href : '')).toLowerCase();
+  const hostname = (loc ? loc.hostname : '').toLowerCase();
+
+  // 1. Direct domain & mock URL detection
+  if (
+    target.includes('chatgpt.com') ||
+    target.includes('chat.openai.com') ||
+    hostname.includes('chatgpt.com') ||
+    hostname.includes('openai.com') ||
+    target.includes('chatgpt_mock')
+  ) {
+    return 'chatgpt';
+  }
+  if (
+    target.includes('claude.ai') ||
+    hostname.includes('claude.ai') ||
+    target.includes('claude_mock')
+  ) {
+    return 'claude';
+  }
+  if (
+    target.includes('perplexity.ai') ||
+    hostname.includes('perplexity.ai') ||
+    target.includes('perplexity_mock')
+  ) {
+    return 'perplexity';
+  }
+  if (
+    target.includes('gemini.google.com') ||
+    hostname.includes('gemini.google.com') ||
+    target.includes('gemini_mock')
+  ) {
+    return 'gemini';
+  }
+
+  // 2. DOM heuristics & explicit data-provider attribute
+  if (doc) {
+    const explicit =
+      doc.documentElement?.getAttribute('data-provider') ||
+      doc.body?.getAttribute('data-provider');
+    if (explicit) {
+      const p = explicit.toLowerCase().trim();
+      if (['gemini', 'chatgpt', 'claude', 'perplexity'].includes(p)) return p;
+    }
+
+    // Distinctive provider DOM selectors
+    if (
+      doc.querySelector('#prompt-textarea') ||
+      doc.querySelector('[data-testid="send-button"]') ||
+      doc.querySelector('[data-testid="fruitjuice-send-button"]')
+    ) {
+      return 'chatgpt';
+    }
+    if (
+      doc.querySelector('.ProseMirror') ||
+      doc.querySelector('button[aria-label="Send Message"]')
+    ) {
+      return 'claude';
+    }
+    if (
+      doc.querySelector('textarea[placeholder*="Ask" i]') ||
+      doc.querySelector('button[aria-label="Submit"]') ||
+      doc.querySelector('[data-testid*="dropzone"]')
+    ) {
+      return 'perplexity';
+    }
+    if (
+      doc.querySelector('rich-textarea') ||
+      doc.querySelector('.ql-editor') ||
+      doc.querySelector('[aria-label="Upload & tools"]')
+    ) {
+      return 'gemini';
+    }
+  }
+
+  return 'gemini';
 }
 
 /**
@@ -92,9 +248,9 @@ function installFileInputClickInterceptor(dataUrl, autoRestoreMs = 3500) {
       HTMLInputElement.prototype.click = original;
       try {
         injectFileFromDataUrl(this, dataUrl);
-        console.log('[UndecGPT] Intercepted file input click; injected screenshot successfully!');
+        console.log('[GlanceAI] Intercepted file input click; injected screenshot successfully!');
       } catch (e) {
-        console.error('[UndecGPT] File injection error:', e);
+        console.error('[GlanceAI] File injection error:', e);
       }
       return;
     }
@@ -109,8 +265,8 @@ function installFileInputClickInterceptor(dataUrl, autoRestoreMs = 3500) {
 }
 
 /**
- * Installs the click interceptor inside Gemini's main-world context via webFrame.
- * This guarantees that when Gemini's page script invokes .click() on the hidden file input,
+ * Installs the click interceptor inside page's main-world context via webFrame.
+ * This guarantees that when page script invokes .click() on the hidden file input,
  * the call hits the main-world interceptor rather than opening the native Windows file dialog.
  */
 function installMainWorldClickInterceptor(dataUrl, autoRestoreMs = 3500) {
@@ -148,7 +304,7 @@ function installMainWorldClickInterceptor(dataUrl, autoRestoreMs = 3500) {
               input.dispatchEvent(new Event('input', { bubbles: true }));
               input.dispatchEvent(new Event('change', { bubbles: true }));
             } catch (err) {
-              console.error('[UndecGPT-MainWorld] Error injecting file:', err);
+              console.error('[GlanceAI-MainWorld] Error injecting file:', err);
             }
           }
 
@@ -158,7 +314,7 @@ function installMainWorldClickInterceptor(dataUrl, autoRestoreMs = 3500) {
               HTMLInputElement.prototype.click = originalClick;
               window.__undec_interceptor_state.installed = false;
               injectFile(this, ${JSON.stringify(dataUrl)}, 'screenshot.png');
-              console.log('[UndecGPT-MainWorld] Intercepted file input click; suppressed native file dialog');
+              console.log('[GlanceAI-MainWorld] Intercepted file input click; suppressed native file dialog');
               return;
             }
             return originalClick.apply(this);
@@ -174,14 +330,14 @@ function installMainWorldClickInterceptor(dataUrl, autoRestoreMs = 3500) {
       `);
     }
   } catch (err) {
-    console.warn('[UndecGPT] installMainWorldClickInterceptor warning:', err);
+    console.warn('[GlanceAI] installMainWorldClickInterceptor warning:', err);
   }
 }
 
 /**
- * Executes WhisprGPT's exact 2-step trigger sequence for Gemini:
- * Step 1: Click '[aria-label="Upload & tools"]' (reveals upload options)
- * Step 2: Arm click interceptor and click '[data-test-id="hidden-local-file-upload-button"]'
+ * Executes 2-step trigger sequence for Gemini or explicit selector strategies:
+ * Step 1: Click tool selector (reveals upload options)
+ * Step 2: Arm click interceptor and click upload button
  * Fallback: Search existing input[type="file"] and inject directly
  * Ultimate Fallback: Synthetic clipboard paste into editor
  */
@@ -195,13 +351,12 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
     const sel = strategy.triggerSelectors[i];
     const el = await waitForElement(sel, strategy.waitTimeoutMs || 1200);
     if (!el) {
-      console.warn('[UndecGPT] triggerSequence element not found:', sel);
+      console.warn('[GlanceAI] triggerSequence element not found:', sel);
       continue;
     }
 
-    console.log(`[UndecGPT] triggerSequence step ${i + 1}/${strategy.triggerSelectors.length}:`, sel, el.tagName);
+    console.log(`[GlanceAI] triggerSequence step ${i + 1}/${strategy.triggerSelectors.length}:`, sel, el.tagName);
 
-    // Arm the interceptor in both preload context and main world right before the final trigger click
     if (i === strategy.triggerSelectors.length - 1) {
       interceptor = installFileInputClickInterceptor(dataUrl, interceptorAutoRestoreMs);
       installMainWorldClickInterceptor(dataUrl, interceptorAutoRestoreMs);
@@ -211,7 +366,6 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
 
   await new Promise((r) => setTimeout(r, gapMs));
 
-  // Check if main world or preload intercepted the click
   let wasIntercepted = !!(interceptor && interceptor.intercepted);
   if (!wasIntercepted) {
     try {
@@ -223,44 +377,24 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
     } catch (_) {}
   }
 
-  // Fallback if interceptor didn't catch a click
   if (!wasIntercepted) {
     const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
-    console.log(`[UndecGPT] Checking direct inputs: found ${inputs.length}`);
+    console.log(`[GlanceAI] Checking direct inputs: found ${inputs.length}`);
     if (inputs.length > 0) {
       const lastInput = inputs[inputs.length - 1];
       injectFileFromDataUrl(lastInput, dataUrl);
-      console.log('[UndecGPT] Injected screenshot directly into input[type="file"]');
+      console.log('[GlanceAI] Injected screenshot directly into input[type="file"]');
       return true;
     }
 
-    // Direct clipboard paste fallback into Gemini editor
-    console.log('[UndecGPT] Attempting synthetic paste fallback into editor...');
-    const editor = document.querySelector('rich-textarea .ql-editor') || document.querySelector('[contenteditable="true"]');
+    console.log('[GlanceAI] Attempting synthetic paste fallback into editor...');
+    const editor =
+      document.querySelector('rich-textarea .ql-editor') ||
+      document.querySelector('.ql-editor') ||
+      document.querySelector('[contenteditable="true"]') ||
+      document.querySelector('textarea');
     if (editor) {
-      try {
-        const [meta, b64] = dataUrl.split(',');
-        const mime = (meta.split(':')[1] || 'image/png').split(';')[0];
-        const byteString = atob(b64);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-        const file = new File([new Blob([ab], { type: mime })], 'screenshot.png', { type: mime });
-
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        editor.focus();
-        const pasteEvent = new ClipboardEvent('paste', {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: dt
-        });
-        editor.dispatchEvent(pasteEvent);
-        console.log('[UndecGPT] Synthetic paste event dispatched');
-        return true;
-      } catch (err) {
-        console.warn('[UndecGPT] Paste fallback error:', err);
-      }
+      return pasteImageBlob(editor, dataUrl);
     }
   }
 
@@ -272,7 +406,7 @@ async function uploadScreenshotToGemini(arg) {
   const dataUrl = typeof arg === 'string' ? arg : arg?.dataUrl;
   if (!dataUrl) return false;
 
-  console.log('[UndecGPT] Uploading screenshot to Gemini via trigger sequence...');
+  console.log('[GlanceAI] Uploading screenshot to Gemini via trigger sequence...');
   const strategy = (typeof arg === 'object' && arg.strategy) ? arg.strategy : {
     type: 'triggerSequence',
     triggerSelectors: [
@@ -286,17 +420,242 @@ async function uploadScreenshotToGemini(arg) {
   return await uploadViaTriggerSequence(strategy, dataUrl);
 }
 
+// Injects image into ChatGPT
+async function uploadScreenshotToChatGPT(arg) {
+  const dataUrl = typeof arg === 'string' ? arg : arg?.dataUrl;
+  if (!dataUrl) return false;
+
+  console.log('[GlanceAI] Uploading screenshot to ChatGPT...');
+
+  if (arg?.strategy?.type === 'triggerSequence') {
+    return await uploadViaTriggerSequence(arg.strategy, dataUrl);
+  }
+
+  const preferFileInput = arg?.preferFileInput || arg?.strategy?.type === 'fileInput';
+  const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+  const editor =
+    document.querySelector('div[contenteditable="true"]#prompt-textarea') ||
+    document.querySelector('#prompt-textarea') ||
+    document.querySelector('textarea#prompt-textarea') ||
+    document.querySelector('form textarea') ||
+    document.querySelector('div[contenteditable="true"]') ||
+    document.querySelector('textarea');
+
+  const attachBtn =
+    document.querySelector('button[data-testid="attach-button"]') ||
+    document.querySelector('button[aria-label*="Attach" i]') ||
+    document.querySelector('button[aria-label="Attach files"]');
+
+  if (preferFileInput || (!editor && fileInputs.length > 0)) {
+    if (attachBtn && fileInputs.length > 0) {
+      const interceptor = installFileInputClickInterceptor(dataUrl, 3000);
+      installMainWorldClickInterceptor(dataUrl, 3000);
+      attachBtn.click();
+      if (interceptor.intercepted) {
+        console.log('[GlanceAI] Intercepted ChatGPT attach button click');
+        return true;
+      }
+    }
+    if (fileInputs.length > 0) {
+      injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+      console.log('[GlanceAI] Screenshot injected directly into ChatGPT file input');
+      return true;
+    }
+  }
+
+  // Paste image blob directly into div[contenteditable="true"]#prompt-textarea / textarea
+  if (editor) {
+    const pasted = pasteImageBlob(editor, dataUrl);
+    if (pasted) {
+      console.log('[GlanceAI] Screenshot pasted directly into ChatGPT editor');
+      return true;
+    }
+  }
+
+  // Fallback: attach button intercept or direct file input
+  if (attachBtn && fileInputs.length > 0) {
+    const interceptor = installFileInputClickInterceptor(dataUrl, 3000);
+    installMainWorldClickInterceptor(dataUrl, 3000);
+    attachBtn.click();
+    if (interceptor.intercepted) {
+      console.log('[GlanceAI] Intercepted ChatGPT attach button click (fallback)');
+      return true;
+    }
+    injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+    return true;
+  }
+
+  if (fileInputs.length > 0) {
+    injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+    console.log('[GlanceAI] Screenshot injected directly into ChatGPT file input (fallback)');
+    return true;
+  }
+
+  return fallbackSyntheticPaste(dataUrl);
+}
+
+// Injects image into Claude
+async function uploadScreenshotToClaude(arg) {
+  const dataUrl = typeof arg === 'string' ? arg : arg?.dataUrl;
+  if (!dataUrl) return false;
+
+  console.log('[GlanceAI] Uploading screenshot to Claude...');
+
+  if (arg?.strategy?.type === 'triggerSequence') {
+    return await uploadViaTriggerSequence(arg.strategy, dataUrl);
+  }
+
+  const preferFileInput = arg?.preferFileInput || arg?.strategy?.type === 'fileInput';
+  const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+  const editor =
+    document.querySelector('div.ProseMirror[contenteditable="true"]') ||
+    document.querySelector('.ProseMirror') ||
+    document.querySelector('fieldset div[contenteditable="true"]') ||
+    document.querySelector('div[contenteditable="true"]');
+
+  const attachBtn =
+    document.querySelector('button[aria-label*="Upload" i]') ||
+    document.querySelector('button[aria-label*="Attach" i]') ||
+    document.querySelector('button[aria-label*="Add content" i]');
+
+  if (preferFileInput || (!editor && fileInputs.length > 0)) {
+    if (attachBtn && fileInputs.length > 0) {
+      const interceptor = installFileInputClickInterceptor(dataUrl, 3000);
+      installMainWorldClickInterceptor(dataUrl, 3000);
+      attachBtn.click();
+      if (interceptor.intercepted) return true;
+    }
+    if (fileInputs.length > 0) {
+      injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+      console.log('[GlanceAI] Screenshot injected into Claude file input');
+      return true;
+    }
+  }
+
+  // Paste image DataTransfer into ProseMirror / contenteditable
+  if (editor) {
+    const pasted = pasteImageBlob(editor, dataUrl);
+    if (pasted) {
+      console.log('[GlanceAI] Screenshot pasted via DataTransfer into Claude ProseMirror');
+      return true;
+    }
+  }
+
+  // Fallback: attach button intercept or direct file input
+  if (attachBtn && fileInputs.length > 0) {
+    const interceptor = installFileInputClickInterceptor(dataUrl, 3000);
+    installMainWorldClickInterceptor(dataUrl, 3000);
+    attachBtn.click();
+    if (interceptor.intercepted) return true;
+    injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+    return true;
+  }
+
+  if (fileInputs.length > 0) {
+    injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+    console.log('[GlanceAI] Screenshot attached via Claude input file element');
+    return true;
+  }
+
+  return fallbackSyntheticPaste(dataUrl);
+}
+
+// Injects image into Perplexity
+async function uploadScreenshotToPerplexity(arg) {
+  const dataUrl = typeof arg === 'string' ? arg : arg?.dataUrl;
+  if (!dataUrl) return false;
+
+  console.log('[GlanceAI] Uploading screenshot to Perplexity...');
+
+  if (arg?.strategy?.type === 'triggerSequence') {
+    return await uploadViaTriggerSequence(arg.strategy, dataUrl);
+  }
+
+  // 1. Inject image into file upload input
+  const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+  if (fileInputs.length > 0) {
+    injectFileFromDataUrl(fileInputs[fileInputs.length - 1], dataUrl);
+    console.log('[GlanceAI] Screenshot injected into Perplexity file input');
+    return true;
+  }
+
+  // 2. Inject image into file dropzone
+  const dropzone =
+    document.querySelector('[data-testid*="dropzone" i]') ||
+    document.querySelector('.dropzone') ||
+    document.querySelector('[class*="dropzone" i]') ||
+    document.querySelector('form.relative') ||
+    document.querySelector('form');
+
+  if (dropzone) {
+    try {
+      const file = dataUrlToFile(dataUrl, 'screenshot.png');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      const dropEvent = new DragEvent('drop', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: dt
+      });
+      dropzone.dispatchEvent(dropEvent);
+      console.log('[GlanceAI] Screenshot injected into Perplexity dropzone');
+      return true;
+    } catch (err) {
+      console.warn('[GlanceAI] Dropzone dispatch error:', err);
+    }
+  }
+
+  // 3. Fallback: paste directly into query textarea
+  const textarea =
+    document.querySelector('textarea[placeholder*="Ask" i]') ||
+    document.querySelector('textarea[placeholder*="search" i]') ||
+    document.querySelector('textarea') ||
+    document.querySelector('[contenteditable="true"]');
+
+  if (textarea) {
+    const pasted = pasteImageBlob(textarea, dataUrl);
+    if (pasted) {
+      console.log('[GlanceAI] Screenshot pasted into Perplexity textarea fallback');
+      return true;
+    }
+  }
+
+  return fallbackSyntheticPaste(dataUrl);
+}
+
+// Unified multi-provider upload engine
+async function uploadScreenshot(arg) {
+  if (typeof arg === 'object' && arg?.strategy?.type === 'triggerSequence') {
+    return await uploadViaTriggerSequence(arg.strategy, typeof arg === 'string' ? arg : arg.dataUrl);
+  }
+
+  const provider = detectActiveProvider();
+  console.log(`[GlanceAI] uploadScreenshot targeting provider: ${provider}`);
+
+  switch (provider) {
+    case 'chatgpt':
+      return await uploadScreenshotToChatGPT(arg);
+    case 'claude':
+      return await uploadScreenshotToClaude(arg);
+    case 'perplexity':
+      return await uploadScreenshotToPerplexity(arg);
+    case 'gemini':
+    default:
+      return await uploadScreenshotToGemini(arg);
+  }
+}
+
 // Injects prompt into Gemini's Quill / rich-textarea editor
 async function injectPromptToGemini(promptText) {
   if (!promptText) return false;
-  console.log('[UndecGPT] Injecting prompt text into Gemini editor...');
+  console.log('[GlanceAI] Injecting prompt text into Gemini editor...');
   const editor =
     (await waitForElement('rich-textarea .ql-editor', 3000)) ||
     document.querySelector('.ql-editor') ||
     document.querySelector('[contenteditable="true"]');
 
   if (!editor) {
-    console.warn('[UndecGPT] Could not find Gemini editor element');
+    console.warn('[GlanceAI] Could not find Gemini editor element');
     return false;
   }
 
@@ -309,27 +668,229 @@ async function injectPromptToGemini(promptText) {
   return true;
 }
 
-// Submits the Gemini query
-async function submitGemini() {
-  console.log('[UndecGPT] Submitting message to Gemini...');
-  const submitSelectors = [
-    '[aria-label="Send message"]',
-    '[aria-label="Send prompt"]',
+// Injects prompt into ChatGPT contenteditable / textarea
+async function injectPromptToChatGPT(promptText) {
+  if (!promptText) return false;
+  console.log('[GlanceAI] Injecting prompt text into ChatGPT...');
+
+  const editor =
+    (await waitForElement('div[contenteditable="true"]#prompt-textarea', 1500)) ||
+    document.querySelector('#prompt-textarea') ||
+    document.querySelector('textarea#prompt-textarea') ||
+    document.querySelector('form textarea') ||
+    document.querySelector('div[contenteditable="true"]') ||
+    document.querySelector('textarea');
+
+  if (!editor) {
+    console.warn('[GlanceAI] Could not find ChatGPT editor');
+    return false;
+  }
+
+  editor.focus();
+
+  if (editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT') {
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      editor.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
+      'value'
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(editor, promptText);
+    } else {
+      editor.value = promptText;
+    }
+  } else {
+    document.execCommand('selectAll', false, null);
+    document.execCommand('insertText', false, promptText);
+
+    if (!editor.textContent || !editor.textContent.includes(promptText)) {
+      let p = editor.querySelector('p');
+      if (!p) {
+        p = document.createElement('p');
+        editor.innerHTML = '';
+        editor.appendChild(p);
+      }
+      p.textContent = promptText;
+    }
+  }
+
+  try {
+    editor.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      cancelable: true,
+      inputType: 'insertText',
+      data: promptText
+    }));
+  } catch (_) {}
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  editor.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// Injects prompt into Claude ProseMirror / contenteditable container
+async function injectPromptToClaude(promptText) {
+  if (!promptText) return false;
+  console.log('[GlanceAI] Injecting prompt text into Claude...');
+
+  const editor =
+    (await waitForElement('div.ProseMirror[contenteditable="true"]', 1500)) ||
+    document.querySelector('.ProseMirror') ||
+    document.querySelector('fieldset div[contenteditable="true"]') ||
+    document.querySelector('div[contenteditable="true"]') ||
+    document.querySelector('textarea');
+
+  if (!editor) {
+    console.warn('[GlanceAI] Could not find Claude editor');
+    return false;
+  }
+
+  editor.focus();
+
+  if (editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT') {
+    editor.value = promptText;
+  } else {
+    document.execCommand('selectAll', false, null);
+    document.execCommand('insertText', false, promptText);
+
+    if (!editor.textContent || !editor.textContent.includes(promptText)) {
+      let p = editor.querySelector('p');
+      if (!p) {
+        p = document.createElement('p');
+        editor.innerHTML = '';
+        editor.appendChild(p);
+      }
+      p.textContent = promptText;
+    }
+  }
+
+  try {
+    editor.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      cancelable: true,
+      inputType: 'insertText',
+      data: promptText
+    }));
+  } catch (_) {}
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  editor.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// Injects prompt into Perplexity query textarea
+async function injectPromptToPerplexity(promptText) {
+  if (!promptText) return false;
+  console.log('[GlanceAI] Injecting prompt text into Perplexity...');
+
+  const editor =
+    (await waitForElement('textarea[placeholder*="Ask" i]', 1500)) ||
+    document.querySelector('textarea[placeholder*="search" i]') ||
+    document.querySelector('textarea') ||
+    document.querySelector('[contenteditable="true"]');
+
+  if (!editor) {
+    console.warn('[GlanceAI] Could not find Perplexity textarea');
+    return false;
+  }
+
+  editor.focus();
+  if (editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT') {
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      editor.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
+      'value'
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(editor, promptText);
+    } else {
+      editor.value = promptText;
+    }
+  } else {
+    document.execCommand('selectAll', false, null);
+    document.execCommand('insertText', false, promptText);
+    if (!editor.textContent || !editor.textContent.includes(promptText)) {
+      editor.textContent = promptText;
+    }
+  }
+
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+  editor.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// Unified multi-provider prompt injection
+async function injectPrompt(promptText) {
+  if (!promptText) return false;
+  const provider = detectActiveProvider();
+  console.log(`[GlanceAI] injectPrompt targeting provider: ${provider}`);
+
+  switch (provider) {
+    case 'chatgpt':
+      return await injectPromptToChatGPT(promptText);
+    case 'claude':
+      return await injectPromptToClaude(promptText);
+    case 'perplexity':
+      return await injectPromptToPerplexity(promptText);
+    case 'gemini':
+    default:
+      return await injectPromptToGemini(promptText);
+  }
+}
+
+// Submits the query across providers with fallback to synthetic Enter keydown
+async function submitPrompt() {
+  const provider = detectActiveProvider();
+  console.log(`[GlanceAI] Submitting message to ${provider}...`);
+
+  const providerSelectors = {
+    chatgpt: [
+      'button[data-testid="send-button"]',
+      'button[data-testid="fruitjuice-send-button"]',
+      'button[aria-label="Send prompt"]',
+      'button[aria-label="Send message"]',
+      'button[aria-label*="Send" i]'
+    ],
+    claude: [
+      'button[aria-label="Send Message"]',
+      'button[aria-label="Send message"]',
+      'button[aria-label*="Send" i]',
+      'button[data-testid*="send" i]'
+    ],
+    perplexity: [
+      'button[aria-label="Submit"]',
+      'button[aria-label*="Submit" i]',
+      'button[aria-label="Ask follow-up"]',
+      'button[aria-label*="Send" i]',
+      'button[data-testid*="submit" i]'
+    ],
+    gemini: [
+      '[aria-label="Send message"]',
+      '[aria-label="Send prompt"]',
+      'button.send-button',
+      'button[aria-label*="Send" i]'
+    ]
+  };
+
+  const prioritizedSelectors = [
+    ...(providerSelectors[provider] || []),
+    'button[data-testid="send-button"]',
+    'button[aria-label="Send message"]',
+    'button[aria-label="Send Message"]',
+    'button[aria-label="Submit"]',
+    'button[aria-label="Send prompt"]',
     'button.send-button',
-    'button[aria-label*="Send" i]'
+    'button[aria-label*="Send" i]',
+    'button[aria-label*="Submit" i]'
   ];
 
   for (let attempt = 0; attempt < 8; attempt++) {
-    for (const sel of submitSelectors) {
+    for (const sel of prioritizedSelectors) {
       const btn = document.querySelector(sel);
-      if (btn && !btn.hasAttribute('disabled') && btn.getAttribute('aria-disabled') !== 'true') {
+      if (btn && !btn.hasAttribute('disabled') && btn.getAttribute('aria-disabled') !== 'true' && !btn.disabled) {
         const clickEvent = new MouseEvent('click', {
           bubbles: true,
           cancelable: true,
           view: window
         });
         btn.dispatchEvent(clickEvent);
-        console.log('[UndecGPT] Clicked submit button:', sel);
+        console.log('[GlanceAI] Clicked submit button:', sel);
         return true;
       }
     }
@@ -337,32 +898,62 @@ async function submitGemini() {
   }
 
   // Fallback: enter key on editor
-  const editor = document.querySelector('rich-textarea .ql-editor') || document.querySelector('[contenteditable="true"]');
-  if (editor) {
-    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-    return true;
+  console.log('[GlanceAI] Send button not ready or enabled; attempting Enter keydown fallback...');
+  const editorCandidates = [
+    document.activeElement,
+    document.querySelector('div[contenteditable="true"]#prompt-textarea'),
+    document.querySelector('div.ProseMirror[contenteditable="true"]'),
+    document.querySelector('rich-textarea .ql-editor'),
+    document.querySelector('.ql-editor'),
+    document.querySelector('textarea'),
+    document.querySelector('[contenteditable="true"]')
+  ];
+
+  for (const ed of editorCandidates) {
+    if (ed && ed !== document.body && ed !== document.documentElement) {
+      if (typeof ed.focus === 'function') ed.focus();
+      ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+      ed.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+      ed.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+      console.log('[GlanceAI] Dispatched synthetic Enter fallback on', ed.tagName, ed.id || ed.className || '');
+      return true;
+    }
   }
 
-  console.warn('[UndecGPT] Submit button was not ready or enabled');
+  console.warn('[GlanceAI] Submit button and editor fallback could not be triggered');
   return false;
 }
 
-// Expose upload API matching WhisprGPT
+const submitGemini = submitPrompt;
+
+// Expose upload API matching WhisprGPT & Glance AI multi-provider
 contextBridge.exposeInMainWorld('upload', {
-  uploadImage: (args) => uploadScreenshotToGemini(args),
+  uploadImage: (args) => uploadScreenshot(args),
   waitForElement: (selector, timeoutMs) => waitForElement(selector, timeoutMs),
-  uploadPrompt: (promptText) => injectPromptToGemini(promptText),
-  submitPrompt: () => submitGemini()
+  uploadPrompt: (promptText) => injectPrompt(promptText),
+  submitPrompt: () => submitPrompt(),
+  detectProvider: (urlOrHostname) => detectActiveProvider(urlOrHostname),
+  uploadScreenshotToGemini: (args) => uploadScreenshotToGemini(args),
+  uploadScreenshotToChatGPT: (args) => uploadScreenshotToChatGPT(args),
+  uploadScreenshotToClaude: (args) => uploadScreenshotToClaude(args),
+  uploadScreenshotToPerplexity: (args) => uploadScreenshotToPerplexity(args),
+  injectPromptToGemini: (promptText) => injectPromptToGemini(promptText),
+  injectPromptToChatGPT: (promptText) => injectPromptToChatGPT(promptText),
+  injectPromptToClaude: (promptText) => injectPromptToClaude(promptText),
+  injectPromptToPerplexity: (promptText) => injectPromptToPerplexity(promptText),
+  fallbackSyntheticPaste: (dataUrl) => fallbackSyntheticPaste(dataUrl)
 });
 
-// Scrolls Gemini chat
-function scrollGeminiChat(amount) {
+// Scrolls chat history across providers
+function scrollChat(amount) {
   const scrollSelectors = [
     'infinite-scroller.chat-history',
     '.chat-history',
     'main',
     '.conversation-container',
-    '[class*="scroller"]'
+    '[class*="scroller"]',
+    '[data-testid*="conversation"]',
+    'div[class*="overflow-y-auto"]'
   ];
 
   for (const sel of scrollSelectors) {
@@ -374,6 +965,7 @@ function scrollGeminiChat(amount) {
   }
   window.scrollBy({ top: amount, behavior: 'smooth' });
 }
+const scrollGeminiChat = scrollChat;
 
 // Floating Toast Notification
 function showToast(text, durationMs = 2600) {
@@ -415,22 +1007,31 @@ function showToast(text, durationMs = 2600) {
 
 // 1. Screenshot & Attach (Ctrl + S)
 ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt, autoSubmit }) => {
-  showToast('📸 Attaching screenshot...');
+  const provider = detectActiveProvider();
+  const providerTitles = {
+    gemini: 'Gemini',
+    chatgpt: 'ChatGPT',
+    claude: 'Claude',
+    perplexity: 'Perplexity'
+  };
+  const providerName = providerTitles[provider] || 'Assistant';
+
+  showToast(`📸 Attaching screenshot to ${providerName}...`);
   if (dataUrl) {
-    await uploadScreenshotToGemini(dataUrl);
+    await uploadScreenshot(dataUrl);
     await new Promise((r) => setTimeout(r, 200));
   }
 
   if (prompt) {
-    await injectPromptToGemini(prompt);
+    await injectPrompt(prompt);
   }
 
   if (autoSubmit) {
-    showToast('🚀 Auto-submitting to Gemini...');
+    showToast(`🚀 Auto-submitting to ${providerName}...`);
     await new Promise((r) => setTimeout(r, 400));
-    const success = await submitGemini();
+    const success = await submitPrompt();
     if (success) {
-      showToast('✅ Sent to Gemini!');
+      showToast(`✅ Sent to ${providerName}!`);
     }
   } else {
     showToast('✅ Attached! Press Ctrl+Enter to send.');
@@ -440,9 +1041,9 @@ ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt, aut
 // 2. Submit Message (Ctrl + Enter)
 ipcRenderer.on('action:submit', async () => {
   showToast('🚀 Sending...');
-  const success = await submitGemini();
+  const success = await submitPrompt();
   if (success) {
-    showToast('✅ Sent to Gemini!');
+    showToast('✅ Sent successfully!');
   } else {
     showToast('⚠️ Send button not ready yet');
   }
@@ -455,7 +1056,7 @@ ipcRenderer.on('action:toggle-dashboard', () => {
 
 // 3. Scroll Chat
 ipcRenderer.on('action:scroll', (_event, amount) => {
-  scrollGeminiChat(amount);
+  scrollChat(amount);
 });
 
 // 4. Focusable Changed (Ctrl + F)
@@ -494,7 +1095,7 @@ ipcRenderer.on('action:show-toast', (_event, payload) => {
   if (text) showToast(text, duration);
 });
 
-// Once DOM is ready, inject our custom stealth floating top bar (strictly on Gemini overlay, never Dashboard or Google Accounts auth)
+// Once DOM is ready, inject our custom stealth floating top bar (strictly on supported AI overlays, never Dashboard or Google Accounts auth)
 function safeInjectHeader() {
   if (typeof window === 'undefined' || !window.location) return;
   const href = window.location.href || '';
@@ -505,8 +1106,16 @@ function safeInjectHeader() {
     return;
   }
 
-  // Only inject toolbar on Gemini app or local test mock
-  if (!hostname.includes('gemini.google.com') && !href.includes('gemini_mock.html')) {
+  // Only inject toolbar on supported AI providers or local test mock
+  const isSupportedApp =
+    hostname.includes('gemini.google.com') ||
+    hostname.includes('chatgpt.com') ||
+    hostname.includes('openai.com') ||
+    hostname.includes('claude.ai') ||
+    hostname.includes('perplexity.ai') ||
+    href.includes('_mock.html');
+
+  if (!isSupportedApp) {
     return;
   }
 
@@ -708,7 +1317,6 @@ function injectStealthHeader() {
 
   toolbar.addEventListener('mouseleave', async () => {
     isToolbarHovered = false;
-    // If settings modal is open, DO NOT re-enable click-through!
     if (document.getElementById('undec-modal-overlay')) {
       return;
     }
@@ -772,9 +1380,9 @@ function injectStealthHeader() {
       const dataUrl = await ipcRenderer.invoke('take-screenshot');
       const settings = await ipcRenderer.invoke('get-settings');
       if (dataUrl) {
-        await uploadScreenshotToGemini(dataUrl);
+        await uploadScreenshot(dataUrl);
         await new Promise((r) => setTimeout(r, 500));
-        await injectPromptToGemini(settings.prompt);
+        await injectPrompt(settings.prompt);
         showToast('Attached! Press Ctrl+Enter to send.');
       }
     } finally {
@@ -786,7 +1394,7 @@ function injectStealthHeader() {
   // Send Button
   sendBtn.addEventListener('click', async () => {
     showToast('Sending...');
-    const success = await submitGemini();
+    const success = await submitPrompt();
     if (success) {
       showToast('Sent successfully!');
     }
@@ -825,7 +1433,6 @@ function openSettingsModal() {
     return;
   }
 
-  // Ensure modal can receive clicks
   ipcRenderer.invoke('set-ignore-mouse-events', false);
 
   ipcRenderer.invoke('get-settings').then((settings) => {
@@ -889,14 +1496,14 @@ function openSettingsModal() {
           <span>
             <strong>Click-Through Mode</strong><br>
             <span style="color:#a1a1aa; font-size:11px;">
-              Pass all clicks directly through Gemini to whatever application is underneath.
+              Pass all clicks directly through overlay to whatever application is underneath.
             </span>
           </span>
         </label>
 
         <div style="font-size:11px; color:#a1a1aa; margin-bottom:16px; line-height:1.6; background:rgba(255,255,255,0.04); padding:8px 10px; border-radius:6px;">
-          <div><strong>Ctrl + S</strong>: Screenshot & Attach to Gemini</div>
-          <div><strong>Ctrl + Enter</strong>: Send Prompt to Gemini</div>
+          <div><strong>Ctrl + S</strong>: Screenshot & Attach to Active AI</div>
+          <div><strong>Ctrl + Enter</strong>: Send Prompt to Active AI</div>
           <div><strong>Ctrl + M</strong>: Toggle Click-Through Mode</div>
           <div><strong>Ctrl + F</strong>: Toggle Focus / No-Activate Mode</div>
           <div><strong>Ctrl + H</strong>: Hide / Show Window (Boss Key)</div>
@@ -923,7 +1530,6 @@ function openSettingsModal() {
 
     document.body.appendChild(modalWrap);
 
-    // Prevent click-through from taking over while interacting with modal
     modalWrap.addEventListener('mouseenter', () => {
       ipcRenderer.invoke('set-ignore-mouse-events', false);
     });

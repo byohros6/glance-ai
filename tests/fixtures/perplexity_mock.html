@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Perplexity Mock Page for Glance AI Testing</title>
+  <style>
+    body { font-family: sans-serif; background: #191a1a; color: #e8e8e8; margin: 0; padding: 20px; }
+    textarea { width: 100%; min-height: 50px; padding: 8px 12px; background: #202222; border-radius: 8px; border: 1px solid #333; color: #fff; }
+    .dropzone { border: 2px dashed #444; padding: 12px; text-align: center; margin-bottom: 8px; }
+    button { background: #20b8cd; color: #111; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h2>Perplexity Mock Session</h2>
+  <div id="chat-container"></div>
+  <form class="input-area">
+    <div class="dropzone" data-testid="dropzone">Drop files here</div>
+    <input type="file" id="perplexity-file-input" style="display:none;" />
+    <textarea placeholder="Ask anything..."></textarea>
+    <button id="submit-btn" aria-label="Submit" type="button">Submit</button>
+  </form>
+
+  <script>
+    window.__testEvents = {
+      pastedFile: null,
+      droppedFile: null,
+      fileInjected: null,
+      editorInput: '',
+      sendClicked: 0,
+      enterKeyDownDispatched: 0
+    };
+
+    const dropzone = document.querySelector('[data-testid="dropzone"]');
+    const fileInput = document.getElementById('perplexity-file-input');
+    const textarea = document.querySelector('textarea');
+    const submitBtn = document.getElementById('submit-btn');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        window.__testEvents.fileInjected = {
+          name: fileInput.files[0].name,
+          size: fileInput.files[0].size,
+          type: fileInput.files[0].type
+        };
+      }
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        const f = e.dataTransfer.files[0];
+        window.__testEvents.droppedFile = {
+          name: f.name,
+          size: f.size,
+          type: f.type
+        };
+      }
+    });
+
+    textarea.addEventListener('paste', (e) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        const f = e.clipboardData.files[0];
+        window.__testEvents.pastedFile = {
+          name: f.name,
+          size: f.size,
+          type: f.type
+        };
+      }
+    });
+
+    textarea.addEventListener('input', () => {
+      window.__testEvents.editorInput = textarea.value;
+    });
+
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        window.__testEvents.enterKeyDownDispatched++;
+      }
+    });
+
+    submitBtn.addEventListener('click', () => {
+      window.__testEvents.sendClicked++;
+    });
+  </script>
+</body>
+</html>

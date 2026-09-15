@@ -98,4 +98,51 @@ Working directory: `C:\Users\benoy\OneDrive\Documents\UndecGPT`
 
 User feedback on naming: The user prefers "Glance AI" (repository: "glance-ai", productName: "Glance AI", binary: "Glance-AI-Portable.exe"). Please ensure this exact branding is reflected across package.json, the dashboard title, README, and the compiled executable.
 
+## Follow-up — 2026-09-15T19:03:19Z
+
+This is a single self-contained implementation and validation task; keep it small and focused.
+
+Extend Glance AI's screenshot capture, prompt injection, and submit automation to support OpenAI ChatGPT, Anthropic Claude, and Perplexity AI in addition to Google Gemini, with robust fallback strategies and complete end-to-end verification.
+
+Working directory: c:\Users\benoy\OneDrive\Documents\UndecGPT
+Integrity mode: development
+
+## Requirements
+
+### R1. Multi-Provider DOM Ingestion & Injection Engine
+- Enhance src/preload/preload.cjs and src/preload/preload.js so that when Ctrl + S (workspace capture) is triggered:
+  - Detects the active provider domain (gemini.google.com, chatgpt.com, claude.ai, perplexity.ai).
+  - Implements provider-tailored file upload strategies:
+    - ChatGPT: Intercept/trigger file upload or paste image blob directly into div[contenteditable="true"]#prompt-textarea / textarea.
+    - Claude: Paste image dataTransfer or attach via input file elements / div[contenteditable="true"].
+    - Perplexity: Inject image into file upload input or file dropzone.
+    - Universal Fallback: Synthesize clipboard paste event (new ClipboardEvent('paste')) with standard PNG file blob on whichever active contenteditable or textarea currently has focus.
+
+### R2. Prompt Injection & Message Submission Across Providers
+- Inject the user's default prompt into the active provider's input container:
+  - ChatGPT: Update text in contenteditable/textarea and trigger input events so the React send button is activated.
+  - Claude: Insert text into ProseMirror/contenteditable container with dispatch event.
+  - Perplexity: Update query textarea.
+- Implement automated submit (Ctrl + Enter or autoSubmit toggle):
+  - Click the respective provider send button ([data-testid="send-button"], button[aria-label="Send Message"], etc.) with fallback to synthetic Enter keydown.
+
+### R3. Quality Assurance, Test Coverage & Packaging
+- Add automated test coverage in tests/ verifying provider detection, selector resolution, and fallback paste mechanics across all 4 supported providers.
+- Maintain 100% pass rate across all existing 20 test suites (npm test).
+- Ensure npm run dist / build.bat packages cleanly into dist/Glance-AI-Portable.exe.
+
+## Acceptance Criteria
+
+### Provider Support
+- [ ] Screenshot injection (Ctrl + S) successfully attaches the captured image on ChatGPT, Claude, and Perplexity (or falls back cleanly via synthetic clipboard paste).
+- [ ] Prompt injection properly populates the input field without breaking React/ProseMirror internal state.
+- [ ] Submit trigger (Ctrl + Enter) reliably fires the send button across all supported providers.
+
+### Reliability & Verification
+- [ ] All unit and integration test suites pass (npm test).
+- [ ] New provider detection and fallback tests pass cleanly.
+- [ ] Standalone portable binary (Glance-AI-Portable.exe) builds without errors.
+- [ ] Changes committed and pushed to main at https://github.com/byohros6/glance-ai.git.
+
+
 

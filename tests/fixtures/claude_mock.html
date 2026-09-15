@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Claude Mock Page for Glance AI Testing</title>
+  <style>
+    body { font-family: sans-serif; background: #262624; color: #fbf0df; margin: 0; padding: 20px; }
+    .ProseMirror { min-height: 44px; padding: 8px 12px; background: #30302e; border-radius: 8px; border: 1px solid #454540; color: #fff; }
+    button { background: #d97706; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h2>Claude Mock Session</h2>
+  <div id="chat-container"></div>
+  <div class="input-area">
+    <button id="upload-btn" aria-label="Upload content">Upload</button>
+    <input type="file" id="claude-file-input" style="display:none;" />
+    <div class="ProseMirror" contenteditable="true" role="textbox" aria-label="Write your prompt to Claude"></div>
+    <button id="send-btn" aria-label="Send Message">Send</button>
+  </div>
+
+  <script>
+    window.__testEvents = {
+      pastedFile: null,
+      fileInjected: null,
+      editorInput: '',
+      sendClicked: 0,
+      enterKeyDownDispatched: 0
+    };
+
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('claude-file-input');
+    const editor = document.querySelector('.ProseMirror');
+    const sendBtn = document.getElementById('send-btn');
+
+    uploadBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        window.__testEvents.fileInjected = {
+          name: fileInput.files[0].name,
+          size: fileInput.files[0].size,
+          type: fileInput.files[0].type
+        };
+      }
+    });
+
+    editor.addEventListener('paste', (e) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        const f = e.clipboardData.files[0];
+        window.__testEvents.pastedFile = {
+          name: f.name,
+          size: f.size,
+          type: f.type
+        };
+      }
+    });
+
+    editor.addEventListener('input', () => {
+      window.__testEvents.editorInput = editor.innerText || editor.textContent;
+    });
+
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        window.__testEvents.enterKeyDownDispatched++;
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      window.__testEvents.sendClicked++;
+    });
+  </script>
+</body>
+</html>

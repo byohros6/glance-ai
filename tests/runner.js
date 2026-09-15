@@ -39,6 +39,12 @@ const testCatalog = [
     name: 'Window Bounds Persistence',
     file: 'window/bounds_persistence.test.js'
   },
+  {
+    tier: 'Tier 1',
+    category: 'Feature Coverage',
+    name: 'Multi-Provider Detection, Injection & Fallback',
+    file: 'injection/multi_provider.test.js'
+  },
 
   // Tier 2: Boundary & Corner Cases
   {
