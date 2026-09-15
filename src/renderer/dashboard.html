@@ -638,8 +638,8 @@
     <!-- Clean Launch Banner -->
     <div class="launch-header">
       <div class="launch-info">
-        <h2>Gemini Overlay</h2>
-        <p>Runs as a floating, screen-share protected assistant. Return here anytime with <kbd style="background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:3px;">Ctrl + B</kbd> or the top menu.</p>
+        <h2>Gemini Heads-Up Overlay</h2>
+        <p>An always-available companion that sits on top of your workspace without disrupting active windows. Return here anytime with <kbd style="background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:3px;">Ctrl + B</kbd> or the top menu.</p>
       </div>
       <div class="launch-actions" style="-webkit-app-region: no-drag !important;">
         <button id="btn-save-settings" class="save-btn" title="Save and persist all settings" style="-webkit-app-region: no-drag !important;">
@@ -720,13 +720,13 @@
       <!-- Card: Interaction & Focus Modes -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Behavior & Focus Modes</span>
+          <span class="card-title">Interaction & Focus Settings</span>
         </div>
 
         <div class="control-row">
           <div class="control-info">
-            <div class="control-label">Focusable Mode <kbd>Ctrl+F</kbd></div>
-            <div class="control-subtext">When OFF, clicking the overlay will not steal focus from your active apps.</div>
+            <div class="control-label">Non-Intrusive Focus <kbd>Ctrl+F</kbd></div>
+            <div class="control-subtext">When OFF, interacting with the overlay will never steal focus or cursor state from your active IDE/app.</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-focusable">
@@ -736,8 +736,8 @@
 
         <div class="control-row">
           <div class="control-info">
-            <div class="control-label">Click-Through Mode <kbd>Ctrl+M</kbd></div>
-            <div class="control-subtext">When ON, mouse clicks pass straight through to underlying windows.</div>
+            <div class="control-label">Ghost Mode (Click-Through) <kbd>Ctrl+M</kbd></div>
+            <div class="control-subtext">When ON, mouse clicks pass straight through the overlay into windows underneath.</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="toggle-clickthrough">
@@ -761,12 +761,12 @@
     <!-- Card: Prompt Customization -->
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Default Solve Prompt</span>
+        <span class="card-title">Default Assistant Prompt</span>
         <div class="preset-group" id="prompt-presets">
-          <button class="preset-btn" data-preset="coding">Coding / LeetCode</button>
-          <button class="preset-btn" data-preset="interview">Technical Interview</button>
-          <button class="preset-btn" data-preset="exam">Multiple Choice</button>
-          <button class="preset-btn" data-preset="general">General</button>
+          <button class="preset-btn" data-preset="coding">Code & Debug</button>
+          <button class="preset-btn" data-preset="interview">Architecture & Design</button>
+          <button class="preset-btn" data-preset="exam">Research & Summary</button>
+          <button class="preset-btn" data-preset="general">General Analysis</button>
         </div>
       </div>
       <textarea id="prompt-textarea" rows="3" placeholder="Enter default prompt..."></textarea>

@@ -1,18 +1,18 @@
 // Dashboard Logic
 const PROMPT_PRESETS = {
-  coding: 'Solve this coding problem step-by-step with optimal time and space complexity. Provide clean, well-commented code in the requested language. Highlight edge cases.',
-  interview: 'Analyze the technical question shown in the image. Outline the thought process clearly, explain trade-offs, and write the complete, optimal solution.',
-  exam: 'Identify the exact question and options shown in the image. Provide the correct answer choice clearly with a concise, factual explanation.',
+  coding: 'Analyze the code or technical problem in the screenshot. Provide clean, well-commented code, explain key implementation details, and identify any edge cases or bugs.',
+  interview: 'Analyze the architecture or technical design shown in the image. Outline the pros, cons, trade-offs, and suggest the most robust implementation approach.',
+  exam: 'Summarize the core concepts, data, and key takeaways from the screenshot in clear, concise bullet points.',
   general: 'Analyze the screenshot and answer what is being asked clearly, directly, and thoroughly.'
 };
 
 const SHORTCUT_METADATA = [
-  { id: 'screenshot', name: 'Screenshot & Attach', desc: 'Captures screen with pre-roll hide and attaches to Gemini', default: 'CommandOrControl+S' },
-  { id: 'send', name: 'Send to Gemini', desc: 'Submits prompt and screenshot to Gemini', default: 'CommandOrControl+Return' },
-  { id: 'returnHome', name: 'Return to Menu', desc: 'Toggles between Gemini overlay and this Dashboard', default: 'CommandOrControl+B' },
-  { id: 'toggleVisibility', name: 'Boss Key / Hide', desc: 'Silently toggles overlay visibility', default: 'CommandOrControl+H' },
-  { id: 'toggleFocus', name: 'Toggle Focusable', desc: 'When OFF, clicking overlay won\'t unfocus other windows', default: 'CommandOrControl+F' },
-  { id: 'toggleClickThrough', name: 'Toggle Click-Through', desc: 'When ON, mouse clicks pass through overlay', default: 'CommandOrControl+M' },
+  { id: 'screenshot', name: 'Capture Context', desc: 'Captures screen workspace and attaches to Gemini', default: 'CommandOrControl+S' },
+  { id: 'send', name: 'Send to Gemini', desc: 'Submits prompt and workspace capture to Gemini', default: 'CommandOrControl+Return' },
+  { id: 'returnHome', name: 'Return to Dashboard', desc: 'Toggles between Gemini overlay and this Dashboard', default: 'CommandOrControl+B' },
+  { id: 'toggleVisibility', name: 'Toggle Visibility', desc: 'Silently toggles overlay on or off', default: 'CommandOrControl+H' },
+  { id: 'toggleFocus', name: 'Non-Intrusive Focus', desc: 'When OFF, clicking overlay will not steal focus from active windows', default: 'CommandOrControl+F' },
+  { id: 'toggleClickThrough', name: 'Ghost Mode', desc: 'When ON, mouse clicks pass through overlay to underlying apps', default: 'CommandOrControl+M' },
   { id: 'moveUp', name: 'Move Up', desc: 'Nudges window up by 40px', default: 'CommandOrControl+Up' },
   { id: 'moveDown', name: 'Move Down', desc: 'Nudges window down by 40px', default: 'CommandOrControl+Down' },
   { id: 'moveLeft', name: 'Move Left', desc: 'Nudges window left by 40px', default: 'CommandOrControl+Left' },
@@ -21,7 +21,7 @@ const SHORTCUT_METADATA = [
   { id: 'scrollDown', name: 'Scroll Chat Down', desc: 'Scrolls chat history downwards', default: 'CommandOrControl+Shift+Down' },
   { id: 'opacityDown', name: 'Decrease Opacity', desc: 'Dims window by 10%', default: 'CommandOrControl+[' },
   { id: 'opacityUp', name: 'Increase Opacity', desc: 'Brightens window by 10%', default: 'CommandOrControl+]' },
-  { id: 'emergencyExit', name: 'Emergency Exit', desc: 'Immediately closes Undec', default: 'CommandOrControl+Shift+Q' }
+  { id: 'emergencyExit', name: 'Exit App', desc: 'Closes Undec immediately', default: 'CommandOrControl+Shift+Q' }
 ];
 
 let currentSettings = {};

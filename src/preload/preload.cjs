@@ -655,18 +655,18 @@ function injectStealthHeader() {
   toolbar.innerHTML = `
     <div class="brand">
       <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      <span>UndecGPT</span>
-      <span class="undec-badge" title="Invisible to screen recordings and screen shares">🛡️ Ghost</span>
+      <span>Undec</span>
+      <span class="undec-badge" title="Always-on-top workspace companion">✨ HUD</span>
     </div>
     <div class="controls">
       <button id="undec-clickthru-btn" class="undec-btn" title="Toggle Click-Through Mode (Ctrl+M)">
         🖱️ Click-Thru: OFF
       </button>
-      <button id="undec-focus-btn" class="undec-btn active" title="Toggle Focusable Mode (Ctrl+F)">
+      <button id="undec-focus-btn" class="undec-btn active" title="Toggle Non-Intrusive Focus (Ctrl+F)">
         🎯 Focus: ON
       </button>
-      <button id="undec-snap-btn" class="undec-btn" title="Attach Screenshot (Ctrl+S)">
-        📸 Attach
+      <button id="undec-snap-btn" class="undec-btn" title="Capture Workspace (Ctrl+S)">
+        📸 Capture
       </button>
       <button id="undec-send-btn" class="undec-btn" title="Send to Gemini (Ctrl+Enter)">
         🚀 Send
@@ -678,7 +678,7 @@ function injectStealthHeader() {
       <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">🏠 Menu</button>
       <button id="undec-settings-btn" class="undec-btn" title="Settings & Prompt">⚙️</button>
       <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">👁️</button>
-      <button id="undec-close-btn" class="undec-btn" title="Emergency Exit (Ctrl+Shift+Q)">✕</button>
+      <button id="undec-close-btn" class="undec-btn" title="Close App (Ctrl+Shift+Q)">✕</button>
     </div>
   `;
 
@@ -855,7 +855,7 @@ function openSettingsModal() {
         </div>
         
         <label style="display:block; font-size:12px; font-weight:500; margin-bottom:6px; color:#d4d4d8;">
-          Default Screen-Solve Prompt:
+          Default Assistant Prompt:
         </label>
         <textarea id="modal-prompt" rows="3" style="
           width: 100%;

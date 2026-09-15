@@ -1,7 +1,7 @@
 {
   "name": "undecgpt",
   "version": "1.0.0",
-  "description": "Undetectable AI Assistant powered by Google Gemini",
+  "description": "A lightweight, always-on-top desktop productivity overlay powered by Google Gemini",
   "main": "src/main/main.js",
   "type": "module",
   "scripts": {
@@ -15,8 +15,10 @@
     "ai",
     "assistant",
     "gemini",
-    "stealth",
-    "undetectable"
+    "productivity",
+    "overlay",
+    "developer-tools",
+    "workspace"
   ],
   "author": "",
   "license": "MIT",
