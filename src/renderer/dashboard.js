@@ -274,7 +274,7 @@ async function init() {
     const checked = e.target.checked;
     api.saveSettings({ focusable: checked });
     api.setFocusable(checked);
-    showToast(checked ? 'Focus Mode ON' : 'Focus Mode non-intrusive');
+    showToast(checked ? 'Focus Mode ON (direct typing enabled)' : 'Focus Mode OFF (non-intrusive: clicks will not steal cursor)');
   });
 
   // Click-Through Toggle
