@@ -71,7 +71,65 @@ Run the complete 20-suite automated test harness covering all 4 tiers:
 npm test
 ```
 
-### 4. Customizing Your Screen-Solve Prompt
-Click the **⚙️ (Settings)** icon in the top toolbar to change:
-- Your default screen-solving prompt (e.g. for coding interviews, exams, or meeting assistance).
-- Focusable & click-through default states.
+### 4. Focus & Event Test Bench (Diagnostic Verification)
+To empirically verify that UndecGPT does not steal window focus or leak keystrokes in Google Chrome:
+- Double-click **`open-test-bench.bat`**, or
+- Run `npm run test-bench`, or
+- Open `tools/focus-tester/index.html` directly in Chrome.
+
+---
+
+## Project Structure & Clean Separation
+
+The repository is strictly modularized with clean separation of concerns:
+
+```
+UndecGPT/
+├── src/                          # Core Electron Application Source
+│   ├── main/                     # Main process (window lifecycle, OS stealth, shortcuts)
+│   │   ├── main.js               # Window creation, session headers, and IPC routing
+│   │   ├── shortcuts.js          # Global hotkey engine and dynamic rebind registration
+│   │   ├── store.js              # Atomic JSON settings persistence
+│   │   └── screenshot.js         # Pre-roll compositor screen capture & DPI math
+│   ├── preload/                  # Context-isolated bridge
+│   │   ├── preload.cjs           # Secure contextBridge API and DOM injection
+│   │   └── preload.js            # Sync copy
+│   └── renderer/                 # Settings & Configuration Dashboard
+│       ├── dashboard.html        # Interactive settings & monitor preview canvas
+│       ├── dashboard.js          # Real-time state synchronization and rebind UI
+│       └── styles.css            # Dark mode glassmorphic UI styling
+│
+├── tools/                        # Diagnostic & External Developer Utilities
+│   └── focus-tester/             # Standalone Browser Event Monitor (Separate from Electron)
+│       ├── index.html            # Zero-dependency browser test bench
+│       └── server.js             # Optional lightweight local HTTP server
+│
+├── tests/                        # 4-Tier Automated Test Suite (20 Suites)
+│   ├── runner.js                 # Complete test catalog runner
+│   ├── unit/                     # Tier 1 & 2 store, DPI, clamping, debounce tests
+│   ├── window/                   # Window flags, shortcuts, OAuth routing tests
+│   ├── injection/                # DOM upload trigger sequence & submit engine tests
+│   └── e2e/                      # End-to-end simulated workflow test
+│
+├── open-test-bench.bat           # 1-Click launcher for browser test bench
+├── run.bat                       # 1-Click launcher for UndecGPT developer mode
+├── build.bat                     # 1-Click build script for portable executable
+├── package.json                  # Project manifest and build configuration
+└── .gitignore                    # Excludes dist/, node_modules/, *.log, *.exe
+```
+
+> **Note on Build Packaging**: The standalone executable builder (`package.json -> build.files`) only packages `src/**/*`. The `tools/` and `tests/` directories are completely excluded from the packaged binary, keeping the distribution light and self-contained.
+
+---
+
+## Connecting to GitHub
+
+This repository is initialized with full local Git history. To connect it to your GitHub account:
+
+1. Create a new repository on [GitHub](https://github.com/new) (e.g. named `UndecGPT`).
+2. Run the following commands in your terminal:
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/UndecGPT.git
+   git branch -M master
+   git push -u origin master
+   ```
