@@ -415,7 +415,7 @@ function showToast(text, durationMs = 2600) {
 // Handle actions coming from main process global shortcuts
 
 // 1. Screenshot & Attach (Ctrl + S)
-ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt }) => {
+ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt, autoSubmit }) => {
   showToast('📸 Attaching screenshot...');
   if (dataUrl) {
     await uploadScreenshotToGemini(dataUrl);
@@ -426,7 +426,16 @@ ipcRenderer.on('action:attach-screenshot', async (_event, { dataUrl, prompt }) =
     await injectPromptToGemini(prompt);
   }
 
-  showToast('✅ Attached! Press Ctrl+Enter to send.');
+  if (autoSubmit) {
+    showToast('🚀 Auto-submitting to Gemini...');
+    await new Promise((r) => setTimeout(r, 400));
+    const success = await submitGemini();
+    if (success) {
+      showToast('✅ Sent to Gemini!');
+    }
+  } else {
+    showToast('✅ Attached! Press Ctrl+Enter to send.');
+  }
 });
 
 // 2. Submit Message (Ctrl + Enter)

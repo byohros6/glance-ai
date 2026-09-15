@@ -115,9 +115,12 @@ async function init() {
   const valOpacity = document.getElementById('val-opacity');
   const toggleFocusable = document.getElementById('toggle-focusable');
   const toggleClickthrough = document.getElementById('toggle-clickthrough');
+  const toggleAutoSubmit = document.getElementById('toggle-autosubmit');
   const promptTextarea = document.getElementById('prompt-textarea');
   const promptCharCount = document.getElementById('prompt-char-count');
   const btnTestSize = document.getElementById('btn-test-size');
+  const btnSaveSettings = document.getElementById('btn-save-settings');
+  const btnSaveText = document.getElementById('btn-save-text');
 
   const w = currentSettings.windowWidth || 520;
   const h = currentSettings.windowHeight || 650;
@@ -132,6 +135,9 @@ async function init() {
 
   toggleFocusable.checked = currentSettings.focusable !== false;
   toggleClickthrough.checked = !!currentSettings.clickThrough;
+  if (toggleAutoSubmit) {
+    toggleAutoSubmit.checked = !!currentSettings.autoSubmit;
+  }
 
   promptTextarea.value = currentSettings.prompt || '';
   promptCharCount.textContent = (currentSettings.prompt || '').length + ' chars';
@@ -200,6 +206,50 @@ async function init() {
     });
   }
 
+  // Explicit Save Settings Button
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', async () => {
+      const currentW = parseInt(inputWidth.value, 10);
+      const currentH = parseInt(inputHeight.value, 10);
+      const currentOp = parseFloat(inputOpacity.value);
+      const currentFocus = toggleFocusable.checked;
+      const currentClickThrough = toggleClickthrough.checked;
+      const currentAutoSubmit = toggleAutoSubmit ? toggleAutoSubmit.checked : false;
+      const currentPrompt = promptTextarea.value;
+
+      try {
+        const updated = await window.undecgpt.saveSettings({
+          windowWidth: currentW,
+          windowHeight: currentH,
+          opacity: currentOp,
+          focusable: currentFocus,
+          clickThrough: currentClickThrough,
+          autoSubmit: currentAutoSubmit,
+          prompt: currentPrompt
+        });
+
+        if (updated) currentSettings = updated;
+        if (window.undecgpt.setFocusable) await window.undecgpt.setFocusable(currentFocus);
+        if (window.undecgpt.setClickThrough) await window.undecgpt.setClickThrough(currentClickThrough);
+
+        btnSaveSettings.classList.add('saved');
+        if (btnSaveText) btnSaveText.textContent = 'Saved!';
+        showToast('Settings saved successfully!');
+
+        const footerHint = document.getElementById('footer-save-hint');
+        if (footerHint) footerHint.textContent = 'All settings saved to disk';
+
+        setTimeout(() => {
+          btnSaveSettings.classList.remove('saved');
+          if (btnSaveText) btnSaveText.textContent = 'Save Settings';
+        }, 1600);
+      } catch (err) {
+        console.error('Failed to save settings:', err);
+        showToast('Failed to save settings');
+      }
+    });
+  }
+
   // Opacity Slider
   inputOpacity.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
@@ -222,6 +272,15 @@ async function init() {
     window.undecgpt.setClickThrough(checked);
     showToast(checked ? 'Click-Through ON' : 'Click-Through OFF');
   });
+
+  // Auto-Submit Toggle
+  if (toggleAutoSubmit) {
+    toggleAutoSubmit.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      window.undecgpt.saveSettings({ autoSubmit: checked });
+      showToast(checked ? 'Auto-Submit on Capture ON' : 'Auto-Submit on Capture OFF');
+    });
+  }
 
   // Prompt Editing & Presets
   promptTextarea.addEventListener('input', (e) => {

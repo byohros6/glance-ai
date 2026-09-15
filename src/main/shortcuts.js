@@ -36,11 +36,13 @@ export function registerGlobalShortcuts(getMainWindow, onToggleDashboard = null)
 
     console.log('[Shortcuts] Screenshot captured successfully. Attaching to Gemini...');
     const prompt = store.get('prompt') || '';
+    const autoSubmit = store.get('autoSubmit') ?? false;
 
     // Unified single execution path: dispatch IPC action to renderer (prevents double-upload race)
     win.webContents.send('action:attach-screenshot', {
       dataUrl,
-      prompt
+      prompt,
+      autoSubmit
     });
   });
 
