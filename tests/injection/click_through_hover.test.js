@@ -127,6 +127,49 @@ suite.test('Toolbar leave does NOT enable click-through if mode is OFF', async (
   );
 });
 
+suite.test('Hotkeys modal opens, accepts Escape key, and restores click-through if enabled', async () => {
+  store.set('clickThrough', true);
+  win.webContents.send('action:click-through-changed', true);
+  await new Promise((r) => setTimeout(r, 50));
+
+  mouseEventsCalls.length = 0;
+
+  // Open modal via settings button
+  await win.webContents.executeJavaScript(`
+    (() => {
+      const btn = document.getElementById('undec-settings-btn');
+      if (btn) btn.click();
+    })()
+  `);
+  await new Promise((r) => setTimeout(r, 150));
+
+  const opened = await win.webContents.executeJavaScript(`
+    !!document.getElementById('undec-modal-overlay')
+  `);
+  assert.strictEqual(opened, true, 'Hotkeys modal must open when settings button clicked');
+
+  // Press Escape key
+  await win.webContents.executeJavaScript(`
+    (() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    })()
+  `);
+  await new Promise((r) => setTimeout(r, 100));
+
+  const closed = await win.webContents.executeJavaScript(`
+    !document.getElementById('undec-modal-overlay')
+  `);
+  assert.strictEqual(closed, true, 'Hotkeys modal must close on Escape key');
+
+  await new Promise((r) => setTimeout(r, 100));
+  const lastCall = mouseEventsCalls[mouseEventsCalls.length - 1];
+  assert.strictEqual(
+    lastCall.ignore,
+    true,
+    'Closing modal must restore ignoreMouseEvents: true when clickThrough is active'
+  );
+});
+
 app.whenReady().then(async () => {
   try {
     const success = await suite.run();

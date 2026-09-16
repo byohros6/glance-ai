@@ -1587,7 +1587,15 @@ function openSettingsModal() {
       ipcRenderer.invoke('set-ignore-mouse-events', false);
     });
 
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
     const closeModal = () => {
+      window.removeEventListener('keydown', onKeyDown);
       modalWrap.remove();
       if (isClickThroughActive) {
         ipcRenderer.invoke('set-ignore-mouse-events', true, { forward: true });

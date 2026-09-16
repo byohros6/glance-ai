@@ -251,14 +251,14 @@ ipcMain.handle('hide-window', () => {
 });
 
 ipcMain.handle('close-app', () => {
-  console.log('[Undec] close-app invoked, terminating process');
+  console.log('[Glance AI] close-app invoked, terminating process');
   try {
     globalShortcut.unregisterAll();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.destroy();
     }
   } catch (err) {
-    console.error('[Undec] Error closing window:', err);
+    console.error('[Glance AI] Error closing window:', err);
   }
   app.exit(0);
 });
