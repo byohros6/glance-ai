@@ -1175,6 +1175,10 @@ function injectStealthHeader() {
   const style = document.createElement('style');
   style.id = 'undecgpt-styles';
   style.textContent = `
+    #undecgpt-toolbar,
+    #undecgpt-toolbar * {
+      box-sizing: border-box !important;
+    }
     #undecgpt-toolbar {
       position: fixed;
       top: 0;
@@ -1233,6 +1237,11 @@ function injectStealthHeader() {
       border-radius: 4px;
       cursor: pointer;
       font-size: 10.5px;
+      font-weight: 500;
+      line-height: 1.2 !important;
+      margin: 0 !important;
+      text-transform: none !important;
+      text-decoration: none !important;
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
@@ -1268,43 +1277,45 @@ function injectStealthHeader() {
     }
     @media (max-width: 540px) {
       .undec-slider-wrap span {
-        display: none;
+        display: none !important;
       }
       .undec-slider {
-        width: 32px;
+        width: 32px !important;
       }
       .undec-btn {
-        padding: 2px 4px;
-        font-size: 10px;
+        padding: 2px 4px !important;
+        font-size: 10px !important;
       }
       #undecgpt-toolbar {
-        padding: 0 5px;
-        gap: 3px;
+        padding: 0 5px !important;
+        gap: 3px !important;
       }
       #undecgpt-toolbar .controls {
-        gap: 2px;
+        gap: 2px !important;
       }
     }
-    @media (max-width: 420px) {
+    @media (max-width: 480px) {
       #undecgpt-toolbar .brand span {
-        display: none;
+        display: none !important;
       }
       .btn-text-full {
-        display: none;
+        display: none !important;
       }
       .btn-text-short {
-        display: inline;
+        display: inline !important;
+      }
+    }
+    @media (max-width: 380px) {
+      .undec-slider-wrap {
+        display: none !important;
       }
       .undec-btn {
-        padding: 2px 3px;
-        font-size: 9.5px;
+        padding: 2px 3px !important;
+        font-size: 9.5px !important;
       }
       #undecgpt-toolbar {
-        padding: 0 4px;
-        gap: 2px;
-      }
-      .undec-slider-wrap {
-        display: none;
+        padding: 0 4px !important;
+        gap: 2px !important;
       }
     }
     body {
@@ -1430,7 +1441,7 @@ function injectStealthHeader() {
   // Attach Screen Button
   snapBtn.addEventListener('click', async () => {
     snapBtn.disabled = true;
-    snapBtn.textContent = 'Attaching...';
+    snapBtn.innerHTML = '<span class="btn-text-full">Attaching...</span><span class="btn-text-short">Wait...</span>';
     try {
       const dataUrl = await ipcRenderer.invoke('take-screenshot');
       const settings = await ipcRenderer.invoke('get-settings');
@@ -1503,6 +1514,8 @@ function openSettingsModal() {
       align-items: center;
       justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      box-sizing: border-box;
+      padding: 12px;
     `;
 
     modalWrap.innerHTML = `
@@ -1511,6 +1524,8 @@ function openSettingsModal() {
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 10px;
         width: 380px;
+        max-width: 100%;
+        box-sizing: border-box;
         padding: 18px 20px;
         color: #f4f4f5;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);

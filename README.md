@@ -108,7 +108,7 @@ glance-ai/
 ├── tools/                        # Developer & Diagnostic Utilities
 │   └── focus-tester/             # Standalone browser event monitor
 │
-├── tests/                        # 4-Tier Automated Test Suite (20 Suites)
+├── tests/                        # 4-Tier Automated Test Suite (21 Suites)
 │   ├── unit/                     # Store, DPI, and math tests
 │   ├── window/                   # Window flags, shortcuts, OAuth routing tests
 │   ├── injection/                # DOM upload sequence & submit engine tests
