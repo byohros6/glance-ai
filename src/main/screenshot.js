@@ -64,7 +64,7 @@ export async function captureScreen() {
   try {
     tempFile = path.join(
       app.getPath('temp'),
-      `undec_${Date.now()}_${Math.random().toString(36).slice(2)}.png`
+      `glance_${Date.now()}_${Math.random().toString(36).slice(2)}.png`
     );
 
     const escapedTempFile = tempFile.replace(/\\/g, '\\\\').replace(/'/g, "''");

@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
+import os from 'node:os';
 import { SettingsStore, DEFAULT_SETTINGS } from '../../src/main/store.js';
 import { createTestSuite, assert } from '../helpers/test_suite.js';
 
@@ -13,7 +14,7 @@ const suite = createTestSuite('Empirical Challenger: Milestone 1 Interactive Har
 let bgWin = null;
 let overlayWin = null;
 let testStore = null;
-const testStorePath = path.join(__dirname, 'temp_concurrency_store.json');
+const testStorePath = path.join(os.tmpdir(), 'temp_concurrency_store.json');
 const mouseEventsCalls = [];
 
 suite.test('Non-Activating Focus Mode: focus does not leak to overlay on click or programmatic focus', async () => {
@@ -279,7 +280,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
 });
 
 suite.test('Store Concurrency: rapid setBounds debounce properly without disk corruption', async () => {
-  const storeFile = path.join(__dirname, 'temp_burst_store.json');
+  const storeFile = path.join(os.tmpdir(), 'temp_burst_store.json');
   if (fs.existsSync(storeFile)) fs.unlinkSync(storeFile);
 
   const burstStore = new SettingsStore(storeFile);
@@ -353,13 +354,19 @@ suite.test('Store Concurrency: rapid setBounds debounce properly without disk co
   assert.ok(burstStore.get('windowWidth') >= 200, 'Width < 200 must be ignored or clamped >= 200');
   assert.ok(burstStore.get('windowHeight') >= 200, 'Height < 200 must be ignored or clamped >= 200');
 
+  // Cancel any pending debounced save timer so it does not write to disk after unlink
+  if (burstStore._saveTimer) {
+    clearTimeout(burstStore._saveTimer);
+    burstStore._saveTimer = null;
+  }
+
   // Cleanup
   if (fs.existsSync(storeFile)) fs.unlinkSync(storeFile);
 });
 
 suite.test('Simultaneous Focus & Click-Through IPC interleaving and Store rapid serialization stress', async () => {
   // Rapidly interleave focus and click-through toggles with simultaneous bounds updates
-  const testFile = path.join(__dirname, 'temp_interleaving_store.json');
+  const testFile = path.join(os.tmpdir(), 'temp_interleaving_store.json');
   if (fs.existsSync(testFile)) fs.unlinkSync(testFile);
   const interleaveStore = new SettingsStore(testFile);
 

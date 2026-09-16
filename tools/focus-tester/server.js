@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`\n=================================================`);
-  console.log(`  UndecGPT Event & Focus Test Bench running!`);
+  console.log(`  Glance AI Event & Focus Test Bench running!`);
   console.log(`  URL: ${url}`);
   console.log(`=================================================\n`);
 

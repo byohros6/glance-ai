@@ -10,6 +10,8 @@ dist/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+temp_*.json
+*.tmp*
 
 # Agent workspaces
 .agents/

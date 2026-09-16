@@ -1,5 +1,5 @@
 /**
- * UndecGPT Main-World Injection Script
+ * Glance AI Main-World Injection Script
  *
  * Executes in Google Gemini's main execution context to intercept native file dialogs,
  * inject screenshots via DataTransfer, and dispatch prompt text.
@@ -40,7 +40,7 @@
       input.dispatchEvent(new Event('change', { bubbles: true }));
       return true;
     } catch (err) {
-      console.error('[UndecGPT-MainWorld] Error injecting file:', err);
+      console.error('[GlanceAI-MainWorld] Error injecting file:', err);
       return false;
     }
   };
@@ -65,7 +65,7 @@
         window.__undec_interceptor_state.installed = false;
 
         window.__undec_injectFile(this, dataUrl, 'screenshot.png');
-        console.log('[UndecGPT-MainWorld] Intercepted file input click; suppressed native file dialog and injected screenshot');
+        console.log('[GlanceAI-MainWorld] Intercepted file input click; suppressed native file dialog and injected screenshot');
         return;
       }
       return originalClick.apply(this);
