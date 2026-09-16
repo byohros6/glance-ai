@@ -10,8 +10,8 @@ echo.
 if exist "dist\Glance-AI-Portable.exe" (
   echo [SUCCESS] Portable executable: dist\Glance-AI-Portable.exe
 )
-if exist "dist\Glance-AI-Setup-1.0.0.exe" (
-  echo [SUCCESS] 1-Click Fast Installer: dist\Glance-AI-Setup-1.0.0.exe
+if exist "dist\Glance-AI-Setup-1.1.0.exe" (
+  echo [SUCCESS] 1-Click Fast Installer: dist\Glance-AI-Setup-1.1.0.exe
 )
 echo.
 pause

@@ -1136,12 +1136,16 @@ if (document.readyState === 'loading') {
 function updateFocusButton(isFocusable) {
   const btn = document.getElementById('undec-focus-btn');
   if (!btn) return;
+  const stateEl = btn.querySelector('.btn-state');
+  if (stateEl) {
+    stateEl.textContent = isFocusable ? 'ON' : 'OFF';
+  } else {
+    btn.textContent = isFocusable ? 'Focus: ON' : 'Focus: OFF';
+  }
   if (isFocusable) {
-    btn.textContent = 'Focus: ON';
     btn.classList.add('active');
     btn.title = 'Focus Mode active: clicking will activate overlay & allow typing (Ctrl+F to toggle)';
   } else {
-    btn.textContent = 'Focus: OFF';
     btn.classList.remove('active');
     btn.title = 'Focus Mode non-intrusive: clicking will NOT unfocus other apps (Ctrl+F to toggle)';
   }
@@ -1150,12 +1154,16 @@ function updateFocusButton(isFocusable) {
 function updateClickThroughButton(isClickThrough) {
   const btn = document.getElementById('undec-clickthru-btn');
   if (!btn) return;
+  const stateEl = btn.querySelector('.btn-state');
+  if (stateEl) {
+    stateEl.textContent = isClickThrough ? 'ON' : 'OFF';
+  } else {
+    btn.textContent = isClickThrough ? 'Click-Thru: ON' : 'Click-Thru: OFF';
+  }
   if (isClickThrough) {
-    btn.textContent = 'Click-Thru: ON';
     btn.classList.add('active');
     btn.title = 'Click-through active: clicks pass through overlay to underlying apps. Hover toolbar or press Ctrl+M to toggle.';
   } else {
-    btn.textContent = 'Click-Thru: OFF';
     btn.classList.remove('active');
     btn.title = 'Click-through inactive: normal interaction with overlay (Ctrl+M to toggle)';
   }
@@ -1255,24 +1263,48 @@ function injectStealthHeader() {
       accent-color: #3b82f6;
       cursor: pointer;
     }
-    @media (max-width: 560px) {
-      #undecgpt-toolbar .brand span {
-        display: none;
-      }
+    .btn-text-short {
+      display: none;
+    }
+    @media (max-width: 540px) {
       .undec-slider-wrap span {
         display: none;
       }
       .undec-slider {
-        width: 30px;
+        width: 32px;
       }
-    }
-    @media (max-width: 440px) {
       .undec-btn {
         padding: 2px 4px;
         font-size: 10px;
       }
       #undecgpt-toolbar {
+        padding: 0 5px;
+        gap: 3px;
+      }
+      #undecgpt-toolbar .controls {
+        gap: 2px;
+      }
+    }
+    @media (max-width: 420px) {
+      #undecgpt-toolbar .brand span {
+        display: none;
+      }
+      .btn-text-full {
+        display: none;
+      }
+      .btn-text-short {
+        display: inline;
+      }
+      .undec-btn {
+        padding: 2px 3px;
+        font-size: 9.5px;
+      }
+      #undecgpt-toolbar {
         padding: 0 4px;
+        gap: 2px;
+      }
+      .undec-slider-wrap {
+        display: none;
       }
     }
     body {
@@ -1294,13 +1326,13 @@ function injectStealthHeader() {
     </div>
     <div class="controls">
       <button id="undec-clickthru-btn" class="undec-btn" title="Toggle Click-Through Mode (Ctrl+M)">
-        Click-Thru: OFF
+        <span class="btn-text-full">Click-Thru: </span><span class="btn-text-short">Thru: </span><span class="btn-state">OFF</span>
       </button>
       <button id="undec-focus-btn" class="undec-btn active" title="Toggle Focus Mode (Ctrl+F)">
-        Focus: ON
+        <span class="btn-text-full">Focus: </span><span class="btn-text-short">Foc: </span><span class="btn-state">ON</span>
       </button>
       <button id="undec-snap-btn" class="undec-btn" title="Capture Workspace (Ctrl+S)">
-        Capture
+        <span class="btn-text-full">Capture</span><span class="btn-text-short">Snap</span>
       </button>
       <button id="undec-send-btn" class="undec-btn" title="Send Message (Ctrl+Enter)">
         Send
@@ -1309,7 +1341,9 @@ function injectStealthHeader() {
         <span>Opacity</span>
         <input type="range" id="undec-opacity-slider" class="undec-slider" min="0.15" max="1.0" step="0.05" value="0.95">
       </div>
-      <button id="undec-settings-btn" class="undec-btn" title="Keyboard Shortcuts (Hotkeys)">Hotkeys</button>
+      <button id="undec-settings-btn" class="undec-btn" title="Keyboard Shortcuts (Hotkeys)">
+        <span class="btn-text-full">Hotkeys</span><span class="btn-text-short">Keys</span>
+      </button>
       <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">Menu</button>
       <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">Hide</button>
       <button id="undec-close-btn" class="undec-btn" title="Close App (Ctrl+Shift+Q)">✕</button>
@@ -1408,7 +1442,7 @@ function injectStealthHeader() {
       }
     } finally {
       snapBtn.disabled = false;
-      snapBtn.textContent = 'Capture';
+      snapBtn.innerHTML = '<span class="btn-text-full">Capture</span><span class="btn-text-short">Snap</span>';
     }
   });
 

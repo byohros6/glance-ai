@@ -143,6 +143,56 @@ Integrity mode: development
 - [ ] New provider detection and fallback tests pass cleanly.
 - [ ] Standalone portable binary (Glance-AI-Portable.exe) builds without errors.
 - [ ] Changes committed and pushed to main at https://github.com/byohros6/glance-ai.git.
+## 2026-09-16T06:22:13Z
 
+This is a single self-contained publication audit and validation task; keep it small and focused.
 
+Conduct a comprehensive publication-readiness audit of Glance AI v1.1.0 covering 100% automated functional testing, edge-case verification, visual UI rendering and screenshot capture of all primary application screens (Settings Dashboard, standard & narrow overlay toolbars, Hotkeys sheet), code quality inspection, dependency cleanliness, file structure hygiene, and git repository status.
 
+Working directory: `c:\Users\benoy\OneDrive\Documents\UndecGPT`
+Integrity mode: development
+
+## Requirements
+
+### R1. Functional & Edge-Case Verification
+- Run the full 21-suite automated test suite (`npm test`) across Tiers 1–4 and confirm zero failures.
+- Verify key edge cases:
+  - Multi-provider DOM injection & universal synthetic paste fallback across Gemini, ChatGPT, Claude, and Perplexity.
+  - Non-intrusive focus mode (`Ctrl + F`) and click-through mode (`Ctrl + M`).
+  - Corrupt store recovery and off-screen window coordinate boundary clamping.
+  - High-DPI screenshot capture and single-instance mutex enforcement.
+
+### R2. Visual UI Inspection & Screen Renderings
+- Programmatically launch and capture high-resolution screenshots of the application interfaces:
+  1. The **Settings Dashboard** (`src/renderer/dashboard.html`) showing clean branding (no redundant top version pill), auto-save footer, and clear Focus Mode descriptions.
+  2. The **Injected Floating Toolbar** in standard overlay view (`520px` width) showing clean branding (no green HUD badge), compact action buttons, and hotkeys button.
+  3. The **Injected Floating Toolbar in narrow view** (`360px` width) verifying zero button overflow, automatic brand text collapsing, and full accessibility of right-hand controls.
+  4. The **Keyboard Shortcuts (Hotkeys) Modal** demonstrating the shortcut cheat sheet and navigation.
+- Embed or catalog the visual screenshots in a structured walkthrough/report.
+
+### R3. Code Quality, File Tree & Dependency Cleanliness
+- Audit source files for syntax cleanliness, leftover console debug statements, and deprecated naming.
+- Confirm `src/preload/preload.js` and `src/preload/preload.cjs` are synchronized.
+- Ensure no orphaned test scripts, temporary scratch files, or deprecated binaries exist in the root or `dist/` folders.
+- Audit `package.json` for proper metadata (name `glance-ai`, version `1.1.0`, scripts, repository, keywords).
+
+### R4. Release Packaging & Git Hygiene
+- Confirm `dist/Glance-AI-Setup-1.1.0.exe` and `dist/Glance-AI-Portable.exe` are present, correctly sized, and built without errors.
+- Confirm `build.bat` and `open-test-bench.bat` operate cleanly.
+- Verify `git status` is clean, all changes are committed with clear conventional commit messages, and the remote repository (`https://github.com/byohros6/glance-ai.git`) on `main` is up to date.
+
+## Acceptance Criteria
+
+### Testing & Reliability
+- [ ] All 21 test suites pass with 0 failures (`npm test`).
+- [ ] No unhandled exceptions or console errors across main, preload, or renderer.
+
+### Visual & UX Standards
+- [ ] Visual screenshots of the Dashboard, standard toolbar, narrow toolbar (no overflow), and Hotkeys modal captured and saved.
+- [ ] Top bar header does not obscure Gemini model selectors or web navigation.
+- [ ] Focus mode description and toggle state match expected behavior.
+
+### Code & Repository Hygiene
+- [ ] Zero deprecated UndecGPT binaries or obsolete artifacts in the distribution tree.
+- [ ] Git repository clean, fully committed, and synchronized to remote main branch.
+- [ ] Both 1-click installer and optimized portable binaries verified.
