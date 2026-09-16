@@ -43,11 +43,10 @@ When you are deep in flow—writing code, debugging, analyzing data, or reviewin
 
 ## Quick Start
 
-### 1. Standalone Portable Executable (Recommended)
-No installation or runtime dependencies required. Download and run:
-```
-dist/Glance-AI-Portable.exe
-```
+### 1. Pre-Built Binaries (Windows x64 — v1.1.0)
+Download the latest pre-compiled binaries from the `dist/` directory or GitHub Releases:
+- **1-Click Fast Installer**: [`dist/Glance-AI-Setup-1.1.0.exe`](dist/Glance-AI-Setup-1.1.0.exe) (Recommended: instant <1s launches with desktop & start shortcuts)
+- **Standalone Portable**: [`dist/Glance-AI-Portable-1.1.0.exe`](dist/Glance-AI-Portable-1.1.0.exe) (Zero installation, cached directory unpacking)
 
 ### 2. Running from Source
 Ensure you have [Node.js](https://nodejs.org/) installed:

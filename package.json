@@ -59,7 +59,7 @@
       "runAfterFinish": true
     },
     "portable": {
-      "artifactName": "Glance-AI-Portable.exe",
+      "artifactName": "Glance-AI-Portable-${version}.${ext}",
       "unpackDirName": "GlanceAI-Portable"
     },
     "forceCodeSigning": false,
