@@ -43,10 +43,10 @@ When you are deep in flow—writing code, debugging, analyzing data, or reviewin
 
 ## Quick Start
 
-### 1. Pre-Built Binaries (Windows x64 — v1.1.0)
+### 1. Pre-Built Binaries (Windows x64 — v1.2.0)
 Download the latest pre-compiled binaries from the `dist/` directory or GitHub Releases:
-- **1-Click Fast Installer**: [`dist/Glance-AI-Setup-1.1.0.exe`](dist/Glance-AI-Setup-1.1.0.exe) (Recommended: instant <1s launches with desktop & start shortcuts)
-- **Standalone Portable**: [`dist/Glance-AI-Portable-1.1.0.exe`](dist/Glance-AI-Portable-1.1.0.exe) (Zero installation, cached directory unpacking)
+- **Interactive Setup Wizard**: [`dist/Glance-AI-Setup-1.2.0.exe`](dist/Glance-AI-Setup-1.2.0.exe) (Recommended: interactive installation wizard with custom destination directory, shortcuts, and completion controls)
+- **Standalone Portable**: [`dist/Glance-AI-Portable-1.2.0.exe`](dist/Glance-AI-Portable-1.2.0.exe) (Zero installation, cached directory unpacking)
 
 ### 2. Running from Source
 Ensure you have [Node.js](https://nodejs.org/) installed:

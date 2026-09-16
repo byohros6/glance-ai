@@ -123,6 +123,13 @@ async function init() {
   const btnTestSize = document.getElementById('btn-test-size');
   const btnSaveSettings = document.getElementById('btn-save-settings');
   const btnSaveText = document.getElementById('btn-save-text');
+  const footerVersion = document.getElementById('footer-version');
+
+  if (footerVersion && api && typeof api.getAppVersion === 'function') {
+    api.getAppVersion().then((ver) => {
+      if (ver) footerVersion.textContent = `Glance AI v${ver}`;
+    }).catch(() => {});
+  }
 
   if (selectProvider) {
     selectProvider.value = currentSettings.provider || 'gemini';

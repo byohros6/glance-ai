@@ -250,6 +250,10 @@ ipcMain.handle('hide-window', () => {
   return true;
 });
 
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('close-app', () => {
   console.log('[Glance AI] close-app invoked, terminating process');
   try {

@@ -22,6 +22,7 @@ const glanceApi = {
   pauseShortcuts: () => ipcRenderer.invoke('pause-shortcuts'),
   resumeShortcuts: () => ipcRenderer.invoke('resume-shortcuts'),
   previewOverlaySize: (width, height) => ipcRenderer.invoke('preview-overlay-size', { width, height }),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   onShortcutAction: (callback) => {
     ipcRenderer.on('shortcut-action', (_event, action, payload) => callback(action, payload));
   }
