@@ -28,13 +28,26 @@ await win.webContents.executeJavaScript(`(() => {
   chat.style.height = '250px'; chat.innerHTML = '<div style="height:20000px">Scroll benchmark</div>';
   chat.scrollTop = 0;
 })()`);
-const scrollStart = performance.now();
 for (let i = 0; i < 20; i++) win.webContents.send('action:scroll', 100);
 await new Promise(resolve => setTimeout(resolve, 150));
 const scrolledAt150ms = await win.webContents.executeJavaScript("document.querySelector('.conversation-container').scrollTop");
 await new Promise(resolve => setTimeout(resolve, 600));
 const finalScroll = await win.webContents.executeJavaScript("document.querySelector('.conversation-container').scrollTop");
-const report = { nativeUpdatesMs, nativeCalls: calls, scroll: { requested: 2000, scrolledAt150ms, finalScroll, measuredAfterMs: performance.now() - scrollStart }, gpu: app.getGPUFeatureStatus(), note: 'Local fixture; 100 opacity state updates and 20 queued scroll commands. Not a live-provider speed measurement.' };
+const frameSamples = [];
+for (const throttled of [true, false]) {
+  win.webContents.setBackgroundThrottling(throttled);
+  win.setFocusable(false);
+  win.showInactive();
+  const frames = await win.webContents.executeJavaScript(`new Promise(resolve => {
+    const intervals = []; let last = performance.now();
+    const frame = now => { intervals.push(now - last); last = now;
+      if (intervals.length < 90) requestAnimationFrame(frame);
+      else { intervals.sort((a,b) => a-b); resolve({visibility: document.visibilityState, medianMs: intervals[45], p95Ms: intervals[85], maxMs: intervals[89]}); }
+    }; requestAnimationFrame(frame);
+  })`);
+  frameSamples.push({ throttled, ...frames });
+}
+const report = { nativeUpdatesMs, nativeCalls: calls, scroll: { requested: 2000, scrolledAt150ms, finalScroll }, unfocusedFrames: frameSamples, gpu: app.getGPUFeatureStatus(), note: 'Local fixture; native state, queued scroll and unfocused rendering measurements. Not a live-provider speed measurement.' };
 await fs.writeFile(process.argv[2] || 'review/performance.json', JSON.stringify(report, null, 2));
 console.log(JSON.stringify(report));
 win.destroy();

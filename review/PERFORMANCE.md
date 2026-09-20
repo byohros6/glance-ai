@@ -27,3 +27,9 @@ Validation completed: syntax checks, all 29 regression suites (131 test cases), 
 - `tools/benchmark-overlay.mjs`: repeatable local benchmark using a disposable profile and fixture.
 
 Both Windows executables under `dist/` are rebuilt with these changes. An already installed or running copy is not automatically replaced by rebuilding the project.
+
+## Follow-up: delay still reported
+
+The user reports continued delay. This remains unresolved; the earlier control benchmarks did not measure authenticated provider typing. A new visible, unfocused overlay probe measured median frame intervals of 16.7 ms and p95 of 16.9 ms both with normal background throttling and with throttling disabled. No rendering-setting change was justified by that result. The data is in `rendering-probe.json`; the benchmark now includes this comparison. No running Glance process was available to inspect during the follow-up.
+
+The completed baseline is versioned as 1.2.1 so users can distinguish the rebuilt executable from older 1.2.0 files. Further runtime fixes should be small, separately verified patch releases and commits. The remaining diagnosis needs the affected provider and whether the delay involves ordinary typing/wheel input, shortcuts, or both.

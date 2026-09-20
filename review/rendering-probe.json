@@ -1,0 +1,46 @@
+{
+  "nativeUpdatesMs": 22.731400000000008,
+  "nativeCalls": {
+    "setOpacity": 100,
+    "setIgnoreMouseEvents": 100,
+    "setFocusable": 2
+  },
+  "scroll": {
+    "requested": 2000,
+    "scrolledAt150ms": 2000,
+    "finalScroll": 2000
+  },
+  "unfocusedFrames": [
+    {
+      "throttled": true,
+      "visibility": "visible",
+      "medianMs": 16.699999999999818,
+      "p95Ms": 16.899999999999977,
+      "maxMs": 17
+    },
+    {
+      "throttled": false,
+      "visibility": "visible",
+      "medianMs": 16.699999999999818,
+      "p95Ms": 16.90000000000009,
+      "maxMs": 17
+    }
+  ],
+  "gpu": {
+    "2d_canvas": "enabled",
+    "direct_rendering_display_compositor": "disabled_off_ok",
+    "gpu_compositing": "enabled",
+    "multiple_raster_threads": "enabled_on",
+    "opengl": "enabled_on",
+    "rasterization": "enabled",
+    "raw_draw": "disabled_off_ok",
+    "skia_graphite": "disabled_off",
+    "trees_in_viz": "disabled_off",
+    "video_decode": "enabled",
+    "video_encode": "enabled",
+    "webgl": "enabled",
+    "webgpu": "enabled",
+    "webnn": "disabled_off"
+  },
+  "note": "Local fixture; native state, queued scroll and unfocused rendering measurements. Not a live-provider speed measurement."
+}
