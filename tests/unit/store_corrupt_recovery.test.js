@@ -6,7 +6,7 @@ import { createTestSuite, assert } from '../helpers/test_suite.js';
 
 const suite = createTestSuite('Tier 2: Corrupt Store Recovery');
 
-const settingsPath = path.join(app.getPath('userData'), 'undecgpt_settings.json');
+const settingsPath = store.filePath;
 let backupData = null;
 
 suite.test('Corrupted syntax JSON recovery', () => {
@@ -71,5 +71,5 @@ app.whenReady().then(async () => {
       } catch (e) {}
     }
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

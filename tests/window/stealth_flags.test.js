@@ -23,8 +23,8 @@ suite.test('Window is created with borderless, transparent, and toolbar flags', 
 
 suite.test('Window has setContentProtection enabled for screen-share stealth', () => {
   win.setContentProtection(true);
-  if (typeof win.getContentProtection === 'function') {
-    assert.strictEqual(win.getContentProtection(), true, 'Content protection must be enabled');
+  if (typeof win.isContentProtected === 'function') {
+    assert.strictEqual(win.isContentProtected(), true, 'Content protection must be enabled');
   }
 });
 
@@ -65,5 +65,5 @@ app.whenReady().then(async () => {
   if (win && !win.isDestroyed()) {
     win.close();
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

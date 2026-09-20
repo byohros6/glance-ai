@@ -31,5 +31,5 @@ suite.test('captureScreen executes fallback when desktopCapturer is unavailable 
 
 app.whenReady().then(async () => {
   const success = await suite.run();
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

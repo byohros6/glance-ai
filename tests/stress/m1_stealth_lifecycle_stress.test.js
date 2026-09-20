@@ -42,6 +42,7 @@ suite.test('Window Attributes: Borderless, transparent, type toolbar, skipTaskba
     backgroundColor: '#00000000',
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       nodeIntegration: false,
       contextIsolation: true
     }
@@ -257,9 +258,9 @@ app.whenReady().then(async () => {
     if (dummyWin && !dummyWin.isDestroyed()) {
       dummyWin.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error('Fatal error in stress suite:', err);
-    process.exit(1);
+    app.exit(1);
   }
 });

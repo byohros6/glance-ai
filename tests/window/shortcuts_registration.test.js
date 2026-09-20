@@ -50,5 +50,5 @@ app.whenReady().then(async () => {
     win.close();
   }
   globalShortcut.unregisterAll();
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

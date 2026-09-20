@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session, ipcMain } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createTestSuite, assert } from '../helpers/test_suite.js';
@@ -12,6 +12,9 @@ const CHROME_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
 
 let win = null;
+ipcMain.handle('get-focusable', () => true);
+ipcMain.handle('get-click-through', () => false);
+ipcMain.handle('get-settings', () => ({ opacity: .95, shortcuts: {} }));
 
 suite.test('Outgoing HTTP request headers spoof Chrome 132 User-Agent', async () => {
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -28,6 +31,7 @@ suite.test('BrowserWindow webContents sets Chrome 132 User-Agent', async () => {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -61,5 +65,5 @@ app.whenReady().then(async () => {
   if (win && !win.isDestroyed()) {
     win.close();
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

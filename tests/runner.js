@@ -1,257 +1,53 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electronPath from 'electron';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Complete test catalog categorized by Tier per TEST_INFRA.md
-const testCatalog = [
-  // Tier 1: Feature Coverage
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Store & Settings Defaults',
-    file: 'unit/store_defaults.test.js'
-  },
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Stealth Window Flags & Native OS Integration',
-    file: 'window/stealth_flags.test.js'
-  },
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Global Shortcuts Registration',
-    file: 'window/shortcuts_registration.test.js'
-  },
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Chrome UA Spoofing & Webdriver Masking',
-    file: 'injection/stealth_masking.test.js'
-  },
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Window Bounds Persistence',
-    file: 'window/bounds_persistence.test.js'
-  },
-  {
-    tier: 'Tier 1',
-    category: 'Feature Coverage',
-    name: 'Multi-Provider Detection, Injection & Fallback',
-    file: 'injection/multi_provider.test.js'
-  },
-
-  // Tier 2: Boundary & Corner Cases
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Corrupt Store Recovery',
-    file: 'unit/store_corrupt_recovery.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Opacity Range Clamping [0.15, 1.0]',
-    file: 'unit/opacity_clamping.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'High-DPI scaleFactor Math',
-    file: 'unit/dpi_scaling.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Off-Screen Coordinates Clamping',
-    file: 'unit/coordinates_boundary.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'WebRTC Failure & PowerShell Fallback',
-    file: 'window/webrtc_fallback.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Single Instance Lock Enforcement',
-    file: 'window/single_instance.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Double Ctrl+S Debounce & Concurrency',
-    file: 'unit/debounce_concurrency.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Direct Input & Synthetic Paste Fallback',
-    file: 'injection/paste_fallback.test.js'
-  },
-  {
-    tier: 'Tier 2',
-    category: 'Boundary & Corner Cases',
-    name: 'Message Submit Engine & Fallback',
-    file: 'injection/submit_engine.test.js'
-  },
-
-  // Tier 3: Cross-Feature Interactions
-  {
-    tier: 'Tier 3',
-    category: 'Cross-Feature Interactions',
-    name: 'Click-Through ON + Toolbar Hover',
-    file: 'injection/click_through_hover.test.js'
-  },
-  {
-    tier: 'Tier 3',
-    category: 'Cross-Feature Interactions',
-    name: 'Non-Activating Focus Mode Interaction',
-    file: 'window/non_activating_focus.test.js'
-  },
-  {
-    tier: 'Tier 3',
-    category: 'Cross-Feature Interactions',
-    name: 'Pre-Roll Hide Delay + Boss Key Interaction',
-    file: 'window/preroll_bosskey.test.js'
-  },
-  {
-    tier: 'Tier 3',
-    category: 'Cross-Feature Interactions',
-    name: 'OAuth Popup & External URL Routing',
-    file: 'window/oauth_popup.test.js'
-  },
-  {
-    tier: 'Tier 3',
-    category: 'Cross-Feature Interactions',
-    name: 'DOM Trigger Sequence & Click Interceptor',
-    file: 'injection/trigger_sequence.test.js'
-  },
-
-  // Tier 4: Real-World Scenarios
-  {
-    tier: 'Tier 4',
-    category: 'Real-World Scenarios',
-    name: 'Full Real-World Simulated Workflow Flow',
-    file: 'e2e/simulated_flow.test.js'
+import { evaluateResult } from './helpers/process_result.js';
+const directory = path.dirname(fileURLToPath(import.meta.url));
+const root = await fs.mkdtemp(path.join(os.tmpdir(), 'glance-tests-'));
+const files = [];
+for (const category of ['unit', 'window', 'injection', 'e2e', 'stress']) {
+  for (const name of (await fs.readdir(path.join(directory, category))).sort()) {
+    if (name.endsWith('.test.js')) files.push(`${category}/${name}`);
   }
-];
-
-function runTestFile(testItem) {
-  return new Promise((resolve) => {
-    const testPath = path.join(__dirname, testItem.file);
-    const startTime = Date.now();
-
-    const child = spawn(electronPath, [testPath], {
-      env: { ...process.env, ELECTRON_ENABLE_LOGGING: '0' },
-      stdio: ['ignore', 'pipe', 'pipe']
+}
+const filters = process.argv.slice(2);
+const selected = files.filter(file => !filters.length || filters.some(filter => file.includes(filter)));
+if (!selected.length) { console.error('No matching test suites.'); process.exit(1); }
+async function run(file) {
+  const profile = path.join(root, file.replaceAll('/', '_'));
+  const start = Date.now();
+  return new Promise(resolve => {
+    const child = spawn(electronPath, [path.join(directory, 'helpers/bootstrap.mjs'), path.join(directory, file)], {
+      env: { ...process.env, GLANCE_TEST_PROFILE: profile, ELECTRON_ENABLE_LOGGING: '0' }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
     });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (d) => {
-      stdout += d.toString();
-    });
-
-    child.stderr.on('data', (d) => {
-      stderr += d.toString();
-    });
-
-    child.on('exit', (code) => {
-      const durationMs = Date.now() - startTime;
-      resolve({
-        ...testItem,
-        code,
-        passed: (code === 0 || (stdout.includes('0 failed') && !stdout.includes('FAIL'))) && !stdout.includes('FAIL:'),
-        durationMs,
-        stdout,
-        stderr
-      });
-    });
-
-    child.on('error', (err) => {
-      const durationMs = Date.now() - startTime;
-      resolve({
-        ...testItem,
-        code: 1,
-        passed: false,
-        durationMs,
-        stdout,
-        stderr: err.message
-      });
+    let stdout = '', stderr = '', timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; child.kill(); }, 90000);
+    child.stdout.on('data', data => { stdout += data; });
+    child.stderr.on('data', data => { stderr += data; });
+    child.on('error', error => { stderr += error.message; });
+    child.on('close', (code, signal) => {
+      clearTimeout(timer);
+      resolve({ file, code, signal, timedOut, stdout, stderr, seconds: ((Date.now() - start) / 1000).toFixed(2), passed: evaluateResult(code, signal, timedOut, stdout, stderr) });
     });
   });
 }
-
-async function main() {
-  console.log('\n===============================================================');
-  console.log('       Glance AI Automated Test Suite (Tiers 1 - 4)             ');
-  console.log('===============================================================\n');
-
-  const results = [];
-  let totalPassed = 0;
-  let totalFailed = 0;
-  const overallStart = Date.now();
-
-  for (let i = 0; i < testCatalog.length; i++) {
-    const item = testCatalog[i];
-    process.stdout.write(`[${i + 1}/${testCatalog.length}] [${item.tier}] ${item.name} ... `);
-
-    const res = await runTestFile(item);
-    results.push(res);
-
-    if (res.passed) {
-      totalPassed++;
-      console.log(`PASS (${(res.durationMs / 1000).toFixed(2)}s)`);
-    } else {
-      totalFailed++;
-      console.log(`FAIL (${(res.durationMs / 1000).toFixed(2)}s)`);
-      if (res.stdout) console.log(res.stdout);
-      if (res.stderr) console.error(res.stderr);
+const results = [];
+try {
+  for (const file of selected) {
+    const result = await run(file); results.push(result);
+    console.log(`${result.passed ? 'PASS' : 'FAIL'} ${file} (${result.seconds}s)`);
+    if (!result.passed) {
+      console.error(`Exit code: ${result.code}; signal: ${result.signal || 'none'}; timeout: ${result.timedOut}`);
+      console.log(result.stdout); console.error(result.stderr);
     }
   }
-
-  const overallDuration = ((Date.now() - overallStart) / 1000).toFixed(2);
-
-  // Summary Table
-  console.log('\n===============================================================');
-  console.log('                     TEST EXECUTION SUMMARY                    ');
-  console.log('===============================================================');
-  console.log('| Tier   | Test Suite                                | Status | Time   |');
-  console.log('|--------|-------------------------------------------|:------:|-------:|');
-
-  for (const r of results) {
-    const tierPadded = r.tier.padEnd(6, ' ');
-    const namePadded = r.name.padEnd(41, ' ');
-    const status = r.passed ? ' PASS ' : ' FAIL ';
-    const timePadded = `${(r.durationMs / 1000).toFixed(2)}s`.padStart(6, ' ');
-    console.log(`| ${tierPadded} | ${namePadded} | ${status} | ${timePadded} |`);
-  }
-
-  console.log('===============================================================');
-  console.log(`Total Suites : ${testCatalog.length}`);
-  console.log(`Passed       : ${totalPassed}`);
-  console.log(`Failed       : ${totalFailed}`);
-  console.log(`Duration     : ${overallDuration}s`);
-  console.log('===============================================================\n');
-
-  if (totalFailed > 0) {
-    console.error(`💥 Test run failed with ${totalFailed} failing suite(s).`);
-    process.exit(1);
-  } else {
-    console.log(`✨ All ${totalPassed} test suites across Tiers 1-4 passed cleanly!`);
-    process.exit(0);
-  }
+  console.log(`\n${results.filter(result => result.passed).length}/${results.length} suites passed.`);
+  if (process.env.GLANCE_TEST_REPORT) await fs.writeFile(process.env.GLANCE_TEST_REPORT, JSON.stringify(results, null, 2));
+} finally {
+  // Only delete the unique directory created by this runner, never a user profile.
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }).catch(error => console.warn('Temporary test profile cleanup:', error.message));
 }
-
-main().catch((err) => {
-  console.error('Fatal test runner error:', err);
-  process.exit(1);
-});
+process.exitCode = results.every(result => result.passed) ? 0 : 1;

@@ -68,5 +68,5 @@ app.whenReady().then(async () => {
     store.set('x', originalBounds.x);
     store.set('y', originalBounds.y);
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

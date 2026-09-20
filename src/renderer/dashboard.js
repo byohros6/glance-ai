@@ -11,7 +11,7 @@ const SHORTCUT_METADATA = [
   { id: 'send', name: 'Send Message', desc: 'Submits prompt and workspace capture to AI companion', default: 'CommandOrControl+Return' },
   { id: 'returnHome', name: 'Return to Dashboard', desc: 'Toggles between AI overlay and this Dashboard', default: 'CommandOrControl+B' },
   { id: 'toggleVisibility', name: 'Toggle Visibility', desc: 'Silently toggles overlay on or off', default: 'CommandOrControl+H' },
-  { id: 'toggleFocus', name: 'Focus Mode', desc: 'When enabled, clicking overlay will not steal focus from active windows', default: 'CommandOrControl+F' },
+  { id: 'toggleFocus', name: 'Focus Mode', desc: 'ON allows typing in the overlay; OFF preserves focus in the underlying app', default: 'CommandOrControl+F' },
   { id: 'toggleClickThrough', name: 'Click-Through Mode', desc: 'When ON, mouse clicks pass through overlay to underlying apps', default: 'CommandOrControl+M' },
   { id: 'moveUp', name: 'Move Up', desc: 'Nudges window up by 40px', default: 'CommandOrControl+Up' },
   { id: 'moveDown', name: 'Move Down', desc: 'Nudges window down by 40px', default: 'CommandOrControl+Down' },
@@ -26,6 +26,36 @@ const SHORTCUT_METADATA = [
 
 let currentSettings = {};
 let activeRecordingState = null;
+let pendingSettings = {};
+let saveTimer;
+let saveChain = Promise.resolve();
+function queueSettings(patch) {
+  Object.assign(pendingSettings, patch);
+  clearTimeout(saveTimer);
+  const hint = document.getElementById('footer-save-hint'); if (hint) hint.textContent = 'Saving changes…';
+  saveTimer = setTimeout(() => flushSettings().catch(error => showToast(error.message)), 300);
+}
+async function flushSettings() {
+  clearTimeout(saveTimer);
+  const patch = pendingSettings; pendingSettings = {};
+  if (!Object.keys(patch).length) return saveChain;
+  const api = window.glanceai || window.undecgpt;
+  saveChain = saveChain.catch(() => {}).then(() => api.saveSettings(patch));
+  try {
+    currentSettings = await saveChain;
+    const hint = document.getElementById('footer-save-hint'); if (hint) hint.textContent = 'Changes saved automatically';
+    return currentSettings;
+  } catch (error) {
+    pendingSettings = { ...patch, ...pendingSettings };
+    const hint = document.getElementById('footer-save-hint'); if (hint) hint.textContent = 'Could not save changes — try Save Settings';
+    throw error;
+  }
+}
+function showShortcutStatus(status) {
+  const element = document.getElementById('shortcut-status');
+  if (element) element.textContent = status.failed?.length ? 'Some global shortcuts are unavailable: ' + status.failed.map(item => item.accelerator || item.error).join(', ') : 'Global shortcuts active. These also work while other apps have focus.';
+}
+
 
 function formatKey(acc) {
   if (!acc) return 'Unset';
@@ -57,6 +87,7 @@ function eventToAccelerator(e) {
   else if (key === 'ArrowLeft') key = 'Left';
   else if (key === 'ArrowRight') key = 'Right';
   else if (key === ' ') key = 'Space';
+  else if (key === '+') key = 'Plus';
   else if (key.length === 1) key = key.toUpperCase();
 
   parts.push(key);
@@ -134,7 +165,7 @@ async function init() {
   if (selectProvider) {
     selectProvider.value = currentSettings.provider || 'gemini';
     selectProvider.addEventListener('change', (e) => {
-      api.saveSettings({ provider: e.target.value });
+      queueSettings({ provider: e.target.value });
       showToast('Active provider set to ' + e.target.options[e.target.selectedIndex].text);
     });
   }
@@ -162,12 +193,28 @@ async function init() {
   // Initialize live preview
   updateLivePreview(w, h);
 
+  api.onSettingsChanged?.(settings => {
+    currentSettings = { ...settings, ...pendingSettings };
+    const value = currentSettings;
+    inputWidth.value = numWidth.value = value.windowWidth;
+    inputHeight.value = numHeight.value = value.windowHeight;
+    inputOpacity.value = value.opacity;
+    if (valOpacity) valOpacity.textContent = Math.round(value.opacity * 100) + '%';
+    toggleFocusable.checked = value.focusable;
+    toggleClickthrough.checked = value.clickThrough;
+    if (toggleAutoSubmit) toggleAutoSubmit.checked = value.autoSubmit;
+    if (selectProvider) selectProvider.value = value.provider;
+    promptTextarea.value = value.prompt;
+    promptCharCount.textContent = value.prompt.length + ' chars';
+    updateLivePreview(value.windowWidth, value.windowHeight);
+  });
+
   // Synchronize Width
   function applyWidth(val) {
     inputWidth.value = val;
     numWidth.value = val;
     updateLivePreview(val, parseInt(inputHeight.value, 10));
-    api.saveSettings({ windowWidth: val });
+    queueSettings({ windowWidth: val });
   }
 
   inputWidth.addEventListener('input', (e) => {
@@ -186,7 +233,7 @@ async function init() {
     inputHeight.value = val;
     numHeight.value = val;
     updateLivePreview(parseInt(inputWidth.value, 10), val);
-    api.saveSettings({ windowHeight: val });
+    queueSettings({ windowHeight: val });
   }
 
   inputHeight.addEventListener('input', (e) => {
@@ -236,7 +283,7 @@ async function init() {
       const currentProvider = selectProvider ? selectProvider.value : (currentSettings.provider || 'gemini');
 
       try {
-        const updated = await api.saveSettings({
+        queueSettings({
           windowWidth: currentW,
           windowHeight: currentH,
           opacity: currentOp,
@@ -247,9 +294,8 @@ async function init() {
           provider: currentProvider
         });
 
+        const updated = await flushSettings();
         if (updated) currentSettings = updated;
-        if (api.setFocusable) await api.setFocusable(currentFocus);
-        if (api.setClickThrough) await api.setClickThrough(currentClickThrough);
 
         btnSaveSettings.classList.add('saved');
         if (btnSaveText) btnSaveText.textContent = 'Saved!';
@@ -273,22 +319,22 @@ async function init() {
   inputOpacity.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value);
     if (valOpacity) valOpacity.textContent = Math.round(val * 100) + '%';
-    api.saveSettings({ opacity: val });
+    queueSettings({ opacity: val });
   });
 
   // Focusable Toggle
   toggleFocusable.addEventListener('change', (e) => {
     const checked = e.target.checked;
-    api.saveSettings({ focusable: checked });
-    api.setFocusable(checked);
+    queueSettings({ focusable: checked });
+
     showToast(checked ? 'Focus Mode ON (direct typing enabled)' : 'Focus Mode OFF (non-intrusive: clicks will not steal cursor)');
   });
 
   // Click-Through Toggle
   toggleClickthrough.addEventListener('change', (e) => {
     const checked = e.target.checked;
-    api.saveSettings({ clickThrough: checked });
-    api.setClickThrough(checked);
+    queueSettings({ clickThrough: checked });
+
     showToast(checked ? 'Click-Through ON' : 'Click-Through OFF');
   });
 
@@ -296,7 +342,7 @@ async function init() {
   if (toggleAutoSubmit) {
     toggleAutoSubmit.addEventListener('change', (e) => {
       const checked = e.target.checked;
-      api.saveSettings({ autoSubmit: checked });
+      queueSettings({ autoSubmit: checked });
       showToast(checked ? 'Auto-Submit on Capture ON' : 'Auto-Submit on Capture OFF');
     });
   }
@@ -305,7 +351,7 @@ async function init() {
   promptTextarea.addEventListener('input', (e) => {
     const text = e.target.value;
     promptCharCount.textContent = text.length + ' chars';
-    api.saveSettings({ prompt: text });
+    queueSettings({ prompt: text });
   });
 
   document.querySelectorAll('#prompt-presets button').forEach((btn) => {
@@ -314,12 +360,20 @@ async function init() {
       if (PROMPT_PRESETS[presetKey]) {
         promptTextarea.value = PROMPT_PRESETS[presetKey];
         promptCharCount.textContent = promptTextarea.value.length + ' chars';
-        api.saveSettings({ prompt: promptTextarea.value });
+        queueSettings({ prompt: promptTextarea.value });
         showToast('Applied ' + btn.textContent.trim() + ' template');
       }
     });
   });
 
+  api.onToast?.(message => showToast(message));
+  api.onLaunchRequest?.(async () => {
+    try { await flushSettings(); await api.launchOverlay(); }
+    catch (error) { showToast(error.message); }
+  });
+  api.onShortcutStatus?.(showShortcutStatus);
+  api.getShortcutStatus?.().then(showShortcutStatus).catch(error => showToast(error.message));
+  window.addEventListener('blur', cancelActiveRecording);
   // Render Shortcuts Table
   renderShortcuts();
 
@@ -328,9 +382,10 @@ async function init() {
   if (resetBtn) {
     resetBtn.addEventListener('click', async () => {
       if (api.resetShortcuts) {
-        currentSettings.shortcuts = await api.resetShortcuts();
-        renderShortcuts();
-        showToast('Hotkeys reset to defaults');
+        try {
+          currentSettings.shortcuts = await api.resetShortcuts();
+          renderShortcuts(); showToast('Hotkeys reset to defaults');
+        } catch (error) { showToast(error.message); }
       }
     });
   }
@@ -338,23 +393,26 @@ async function init() {
   // Launch Overlay Button
   const launchBtn = document.getElementById('btn-launch-gemini');
   if (launchBtn) {
-    launchBtn.addEventListener('click', () => {
+    launchBtn.addEventListener('click', async () => {
+      try {
+      await flushSettings();
       if (api.launchOverlay) {
-        api.launchOverlay();
+        await api.launchOverlay();
       } else if (api.launchGemini) {
-        api.launchGemini();
+        await api.launchGemini();
       }
+      } catch (error) { showToast(error.message); }
     });
   }
 
   // Direct Window Close & Minimize Bindings
   const closeBtn = document.getElementById('btn-close');
   if (closeBtn) {
-    closeBtn.onclick = (e) => {
+    closeBtn.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (api && api.closeApp) {
-        api.closeApp();
+        try { await flushSettings(); await api.closeApp(); } catch (error) { showToast(error.message); }
       } else {
         window.close();
       }
@@ -415,7 +473,7 @@ function renderShortcuts() {
   });
 }
 
-function startRecording(actionId, btn, badge) {
+async function startRecording(actionId, btn, badge) {
   const api = window.glanceai || window.undecgpt;
 
   // If clicking the same button currently in recording mode, toggle off / cancel
@@ -438,7 +496,7 @@ function startRecording(actionId, btn, badge) {
 
   // Pause global OS shortcuts so Electron doesn't consume keystrokes before Chromium
   if (api && api.pauseShortcuts) {
-    api.pauseShortcuts();
+    await api.pauseShortcuts();
   }
 
   const onKeyDown = async (e) => {
@@ -485,7 +543,7 @@ function startRecording(actionId, btn, badge) {
       } catch (err) {
         console.error('Failed to update shortcut:', err);
         badge.textContent = originalText;
-        showToast('Failed to register shortcut');
+        showToast(err.message);
       }
     } else {
       badge.textContent = formatKey(acc);

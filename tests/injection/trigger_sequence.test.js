@@ -27,6 +27,7 @@ suite.test('Upload triggers 2-step sequence and intercepts file input click', as
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -95,9 +96,9 @@ app.whenReady().then(async () => {
     if (win && !win.isDestroyed()) {
       win.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

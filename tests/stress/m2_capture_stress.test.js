@@ -321,9 +321,9 @@ app.whenReady().then(async () => {
     if (testWin && !testWin.isDestroyed()) {
       testWin.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error('Fatal error in capture stress suite:', err);
-    process.exit(1);
+    app.exit(1);
   }
 });

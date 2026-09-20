@@ -49,6 +49,7 @@ suite.test('Step 1: Launch stealth overlay window', async () => {
     show: true,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -67,8 +68,8 @@ suite.test('Step 1: Launch stealth overlay window', async () => {
 
   assert.strictEqual(win.isVisible(), true, 'Window must be visible');
   assert.strictEqual(win.isAlwaysOnTop(), true, 'Window must be always on top');
-  if (typeof win.getContentProtection === 'function') {
-    assert.strictEqual(win.getContentProtection(), true, 'Window must have content protection active');
+  if (typeof win.isContentProtected === 'function') {
+    assert.strictEqual(win.isContentProtected(), true, 'Window must have content protection active');
   }
 
   const hasToolbar = await win.webContents.executeJavaScript(`
@@ -180,9 +181,9 @@ suite.test('Step 7: Clean exit and teardown', async () => {
 app.whenReady().then(async () => {
   try {
     const success = await suite.run();
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

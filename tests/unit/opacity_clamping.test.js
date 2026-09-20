@@ -72,5 +72,5 @@ app.whenReady().then(async () => {
   if (win && !win.isDestroyed()) {
     win.close();
   }
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

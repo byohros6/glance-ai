@@ -1,384 +1,274 @@
-import { app, BrowserWindow, session, ipcMain, shell, globalShortcut } from 'electron';
+import { app, BrowserWindow, session, ipcMain, shell, globalShortcut, screen, dialog } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { store, DEFAULT_SETTINGS } from './store.js';
-import { registerGlobalShortcuts } from './shortcuts.js';
-import { captureScreen, captureScreenWithHide } from './screenshot.js';
+import { registerGlobalShortcuts, validateShortcuts } from './shortcuts.js';
+import { captureScreenWithHide } from './screenshot.js';
+import { OperationCoordinator } from './operations.js';
+import { createPermissionPolicy } from './permissions.js';
+import { PROVIDER_URLS, isAllowedWebURL, isExternalURL, isTrustedSender, requireBoolean } from './security.js';
+import { applyWindowState, restoreWindow, hideWindow, visibleBounds } from './window-state.js';
+export { PROVIDER_URLS };
 
+const directory = path.dirname(fileURLToPath(import.meta.url));
+const dashboardPath = path.join(directory, '../renderer/dashboard.html');
+const dashboardURL = pathToFileURL(dashboardPath).href;
+const preload = path.join(directory, '../preload/preload.cjs');
+// Retain browser compatibility without advertising an obsolete Chromium version.
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+app.userAgentFallback = userAgent;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CHROME_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
-
-app.userAgentFallback = CHROME_USER_AGENT;
-
-// Single instance lock
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-  process.exit(0);
-}
-
-export const PROVIDER_URLS = {
-  gemini: 'https://gemini.google.com/app',
-  chatgpt: 'https://chatgpt.com/',
-  claude: 'https://claude.ai/',
-  perplexity: 'https://www.perplexity.ai/'
-};
-
-let mainWindow = null;
-let currentMode = 'dashboard'; // 'dashboard' or 'gemini'
-
-function getMainWindow() {
-  return mainWindow;
-}
-
-export function showDashboard() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  currentMode = 'dashboard';
-
-  mainWindow.setSize(840, 720);
-  mainWindow.center();
-  mainWindow.setSkipTaskbar(false);
-  mainWindow.setOpacity(1.0);
-  mainWindow.setIgnoreMouseEvents(false);
-  mainWindow.setFocusable(true);
-  mainWindow.setAlwaysOnTop(true);
-  mainWindow.setContentProtection(false);
-  mainWindow.loadFile(path.join(__dirname, '../renderer/dashboard.html'));
-  mainWindow.show();
-  mainWindow.focus();
-}
-
-export function launchGeminiOverlay() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  currentMode = 'gemini';
-
-  const width = store.get('windowWidth') || 520;
-  const height = store.get('windowHeight') || 650;
-  const savedX = store.get('x');
-  const savedY = store.get('y') ?? 50;
-  const isFocusable = store.get('focusable') ?? true;
-
-  mainWindow.setSize(width, height);
-  if (savedX !== null && Number.isFinite(savedX) && Number.isFinite(savedY)) {
-    mainWindow.setPosition(savedX, savedY);
-  }
-
-  const isUndetectable = store.get('undetectable') !== false;
-  mainWindow.setContentProtection(isUndetectable);
-  mainWindow.setSkipTaskbar(true);
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
-
-  const initialOpacity = store.get('opacity') || 0.95;
-  mainWindow.setOpacity(initialOpacity);
-  mainWindow.setFocusable(isFocusable);
-
-  if (store.get('clickThrough')) {
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
-  } else {
-    mainWindow.setIgnoreMouseEvents(false);
-  }
-
-  const provider = store.get('provider') || 'gemini';
-  const targetUrl = PROVIDER_URLS[provider] || PROVIDER_URLS.gemini;
-
-  mainWindow.webContents.setUserAgent(CHROME_USER_AGENT);
-  mainWindow.loadURL(targetUrl, {
-    userAgent: CHROME_USER_AGENT
-  });
-}
-
-export const launchOverlay = launchGeminiOverlay;
-
-function toggleDashboard() {
-  if (currentMode === 'gemini') {
-    showDashboard();
-  } else {
-    launchGeminiOverlay();
-  }
-}
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 840,
-    height: 720,
-    center: true,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: false, // Dashboard appears in taskbar like a normal app
-    focusable: true,
-    hasShadow: true,
-    resizable: true,
-    movable: true,
-    title: 'Glance AI',
-    backgroundColor: '#0d0f14',
-    webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.cjs'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      devTools: true,
-      spellcheck: true
-    }
-  });
-
-  // Handle child windows / OAuth popups
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.includes('accounts.google.com') || url.includes('google.com')) {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          width: 520,
-          height: 680,
-          center: true,
-          alwaysOnTop: true,
-          frame: true,
-          autoHideMenuBar: true,
-          backgroundColor: '#ffffff',
-          webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-          }
-        }
-      };
-    }
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  // Save window bounds on resize/move only when in Gemini overlay mode
-  mainWindow.on('resize', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (currentMode === 'gemini') {
-      const [w, h] = mainWindow.getSize();
-      store.setBounds({ width: w, height: h });
-    }
-  });
-
-  mainWindow.on('move', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (currentMode === 'gemini') {
-      const [x, y] = mainWindow.getPosition();
-      store.setBounds({ x, y });
-    }
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
-  // Start with Dashboard
-  showDashboard();
-}
-
-// App lifecycle
-app.whenReady().then(() => {
-  // Uniform Chrome 132 User-Agent across all web requests ensuring full session cookie synchronization
-  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['User-Agent'] = CHROME_USER_AGENT;
-    callback({ cancel: false, requestHeaders: details.requestHeaders });
-  });
-
-  createWindow();
-  registerGlobalShortcuts(getMainWindow, toggleDashboard);
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+let overlayWindow = null;
+let dashboardWindow = null;
+let currentMode = 'dashboard';
+let loadedProvider = null;
+let shortcutStatus = { registered: [], failed: [] };
+let previewTimer = null;
+let previewBounds = null;
+let pauseTimer = null;
+let quitting = false;
+const operations = new OperationCoordinator({
+  capture: captureScreenWithHide, settings: () => store.getAll(),
+  restore: win => applyWindowState(win, store.getAll())
 });
-
-app.on('second-instance', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    if (mainWindow.isFocusable()) {
-      mainWindow.show();
-      mainWindow.focus();
-    } else {
-      mainWindow.showInactive();
-    }
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    mainWindow.setSkipTaskbar(true);
-    const isUndetectable = store.get('undetectable') !== false;
-    mainWindow.setContentProtection(isUndetectable);
+export function getWindows() { return { overlayWindow, dashboardWindow }; }
+function currentWindow() { return currentMode === 'dashboard' ? dashboardWindow : overlayWindow; }
+function getOverlay() { return currentMode === 'gemini' ? overlayWindow : null; }
+function notify(message) {
+  const win = currentWindow();
+  if (win && !win.isDestroyed()) win.webContents.send('action:show-toast', { message });
+}
+function settingsChanged() {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.webContents.send('action:settings-changed', store.getAll());
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    if (!operations.active) applyWindowState(overlayWindow, store.getAll());
+    overlayWindow.webContents.send('action:settings-changed', store.getAll());
   }
-});
-
-app.on('will-quit', () => {
+}
+function exitApp() {
+  quitting = true;
+  operations.cancel();
   store.flush();
   globalShortcut.unregisterAll();
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-// Register IPC handlers for renderer controls
-ipcMain.handle('get-settings', () => {
-  return store.getAll();
-});
-
-ipcMain.handle('save-settings', (_event, newSettings) => {
-  store.update(newSettings);
-  return store.getAll();
-});
-
-ipcMain.handle('set-opacity', (_event, opacityVal) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    const num = Number.isFinite(opacityVal) ? opacityVal : 0.95;
-    const clamped = Math.max(0.15, Math.min(1.0, num));
-    mainWindow.setOpacity(clamped);
-    store.set('opacity', clamped);
-    mainWindow.webContents.send('action:opacity-changed', clamped);
-  }
-  return true;
-});
-
-ipcMain.handle('hide-window', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setOpacity(0);
-    mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    mainWindow.hide();
-  }
-  return true;
-});
-
-ipcMain.handle('get-app-version', () => {
-  return app.getVersion();
-});
-
-ipcMain.handle('close-app', () => {
-  console.log('[Glance AI] close-app invoked, terminating process');
-  try {
-    globalShortcut.unregisterAll();
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.destroy();
-    }
-  } catch (err) {
-    console.error('[Glance AI] Error closing window:', err);
-  }
   app.exit(0);
-});
-
-ipcMain.handle('take-screenshot', async () => {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return await captureScreen();
+}
+async function runOperation(type) {
+  const win = getOverlay();
+  if (!win || !isAllowedWebURL(win.webContents.getURL())) {
+    notify('Open your AI conversation before capturing or sending.');
+    return { ok: false, error: 'No active AI conversation.' };
   }
-  const isClickThrough = store.get('clickThrough') ?? false;
-  const storedOpacity = store.get('opacity') || 0.95;
-  return await captureScreenWithHide(mainWindow, {
-    savedOpacity: mainWindow.getOpacity() > 0 ? mainWindow.getOpacity() : storedOpacity,
-    clickThrough: isClickThrough,
-    defaultOpacity: storedOpacity
+  if (win.webContents.isLoadingMainFrame()) return { ok: false, error: 'The AI page is still loading. Please try again when it is ready.' };
+  const result = await operations.run(win, type);
+  if (!result.ok && !win.isDestroyed()) win.webContents.send('action:show-toast', { message: result.error });
+  return result;
+}
+function register(shortcuts = store.get('shortcuts')) {
+  clearTimeout(pauseTimer);
+  pauseTimer = null;
+  shortcutStatus = registerGlobalShortcuts(getOverlay, toggleDashboard, {
+    screenshot: () => runOperation('capture'), send: () => runOperation('submit'),
+    toggleVisibility: () => {
+      const win = currentWindow();
+      if (!win || win.isDestroyed()) return;
+      if (win.isVisible()) hideWindow(win);
+      else restoreWindow(win, store.getAll(), currentMode === 'dashboard');
+    },
+    toggleFocus: () => { store.set('focusable', !store.get('focusable')); settingsChanged(); },
+    toggleClickThrough: () => { store.set('clickThrough', !store.get('clickThrough')); settingsChanged(); },
+    opacityDown: () => { store.set('opacity', store.get('opacity') - .1); settingsChanged(); },
+    opacityUp: () => { store.set('opacity', store.get('opacity') + .1); settingsChanged(); },
+    emergencyExit: exitApp, onError: error => notify(error.message)
+  }, shortcuts);
+  dashboardWindow?.webContents.send('action:shortcut-status', shortcutStatus);
+  return shortcutStatus;
+}
+function changeShortcuts(next) {
+  validateShortcuts(next);
+  const previous = store.get('shortcuts');
+  const result = register(next);
+  if (result.failed.length) {
+    register(previous);
+    throw new Error(`Shortcut unavailable: ${result.failed.map(item => item.accelerator).join(', ')}. Previous bindings restored.`);
+  }
+  try { store.update({ shortcuts: next }); }
+  catch (error) { store.set('shortcuts', previous); register(previous); throw error; }
+  settingsChanged();
+  return store.get('shortcuts');
+}
+function openExternal(url) {
+  if (isExternalURL(url)) shell.openExternal(url).catch(error => notify(`Could not open link: ${error.message}`));
+}
+function secureWebContents(contents, local = false) {
+  const allowed = url => local ? url === dashboardURL : isAllowedWebURL(url, true);
+  contents.on('will-navigate', (event, url) => {
+    if (!allowed(url)) { event.preventDefault(); openExternal(url); }
   });
-});
-
-ipcMain.handle('get-focusable', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    return mainWindow.isFocusable();
-  }
-  return store.get('focusable') ?? true;
-});
-
-ipcMain.handle('set-focusable', (_event, focusableVal) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setFocusable(focusableVal);
-    if (!focusableVal && mainWindow.isFocused()) {
-      mainWindow.blur();
+  contents.on('will-redirect', (event, url) => { if (!allowed(url)) event.preventDefault(); });
+  contents.on('will-attach-webview', event => event.preventDefault());
+  contents.setWindowOpenHandler(({ url }) => {
+    if (!local && isAllowedWebURL(url, true)) return { action: 'allow', overrideBrowserWindowOptions: {
+      width: 520, height: 680, frame: true, alwaysOnTop: true, autoHideMenuBar: true,
+      webPreferences: { preload: path.join(directory, '../preload/auth.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true }
+    }};
+    openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('did-create-window', child => secureWebContents(child.webContents));
+}
+function createDashboard() {
+  const win = new BrowserWindow({ width: 840, height: 720, minWidth: 600, minHeight: 450, show: false, frame: false, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true } });
+  dashboardWindow = win;
+  secureWebContents(win.webContents, true);
+  win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
+  win.on('closed', () => { dashboardWindow = null; });
+  win.webContents.on('did-finish-load', () => win.webContents.send('action:shortcut-status', shortcutStatus));
+  win.on('blur', () => { if (pauseTimer) register(); });
+  win.loadFile(dashboardPath).catch(error => console.error('Dashboard failed to load:', error));
+  return win;
+}
+function createOverlay() {
+  const settings = store.getAll();
+  const win = new BrowserWindow({ ...visibleBounds({ x: settings.x, y: settings.y, width: settings.windowWidth, height: settings.windowHeight }), show: false, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, focusable: settings.focusable, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: true } });
+  overlayWindow = win;
+  secureWebContents(win.webContents);
+  win.webContents.setUserAgent(userAgent);
+  for (const event of ['resize', 'move']) win.on(event, () => { if (!win.isDestroyed()) store.setBounds(win.getBounds()); });
+  win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
+  win.on('closed', () => { operations.cancel(win); overlayWindow = null; loadedProvider = null; });
+  win.webContents.on('did-start-navigation', (_event, _url, inPlace, mainFrame) => {
+    if (mainFrame && !inPlace) operations.cancel(win);
+  });
+  win.webContents.on('render-process-gone', () => {
+    operations.cancel(win); loadedProvider = null; showDashboard();
+    notify('The AI page stopped responding. Launch the overlay to reload it.');
+  });
+  win.webContents.on('did-fail-load', (_event, code, description, _url, mainFrame) => {
+    if (mainFrame && code !== -3) {
+      loadedProvider = null; showDashboard();
+      notify(`Could not load the AI page (${description}). Check your connection and launch again.`);
     }
-    store.set('focusable', focusableVal);
-    mainWindow.webContents.send('action:focus-changed', focusableVal);
-    console.log(`[Glance AI] Window focusable set to: ${focusableVal}`);
-  }
-  return store.get('focusable');
-});
+  });
+  return win;
+}
+export function showDashboard() {
+  currentMode = 'dashboard';
+  operations.cancel(overlayWindow);
+  hideWindow(overlayWindow);
+  const win = dashboardWindow && !dashboardWindow.isDestroyed() ? dashboardWindow : createDashboard();
+  restoreWindow(win, store.getAll(), true, true);
+  if (!win.webContents.isLoading()) win.webContents.send('action:settings-changed', store.getAll());
+}
+export function launchGeminiOverlay() {
+  store.flush();
+  register();
+  const win = overlayWindow && !overlayWindow.isDestroyed() ? overlayWindow : createOverlay();
+  currentMode = 'gemini';
+  hideWindow(dashboardWindow);
+  const settings = store.getAll();
+  win.setBounds(visibleBounds({ ...win.getBounds(), width: settings.windowWidth, height: settings.windowHeight }));
+  restoreWindow(win, settings);
+  if (loadedProvider !== settings.provider) {
+    operations.cancel(win);
+    loadedProvider = settings.provider;
+    win.loadURL(PROVIDER_URLS[settings.provider], { userAgent }).catch(error => {
+      if (!win.isDestroyed() && error.code !== 'ERR_ABORTED') { loadedProvider = null; showDashboard(); notify('Unable to load the AI page. Check your connection and try again.'); }
+    });
+  } else win.webContents.send('action:settings-changed', settings);
+}
+export const launchOverlay = launchGeminiOverlay;
+export function toggleDashboard() {
+  if (currentMode === 'gemini') showDashboard();
+  else if (dashboardWindow && !dashboardWindow.webContents.isLoading()) dashboardWindow.webContents.send('action:launch-request');
+}
 
-ipcMain.handle('set-ignore-mouse-events', (_event, ignore, options) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(ignore, options);
-  }
+// Only the known main frame may use its role's channels. Provider pages receive no JS bridge.
+function handle(channel, roles, callback) {
+  ipcMain.handle(channel, (event, ...args) => {
+    const dashboard = roles.includes('dashboard') && isTrustedSender(event, dashboardWindow, url => url === dashboardURL);
+    const overlay = roles.includes('overlay') && isTrustedSender(event, overlayWindow, url => isAllowedWebURL(url));
+    if (!dashboard && !overlay) throw new Error('This page is not allowed to use this control.');
+    return callback(...args);
+  });
+}
+const both = ['dashboard', 'overlay'];
+handle('get-settings', both, () => store.getAll());
+handle('save-settings', ['dashboard'], value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !Object.hasOwn(DEFAULT_SETTINGS, key) || key === 'shortcuts')) throw new Error('Invalid settings');
+  const result = store.update(value); settingsChanged(); return result;
+});
+handle('get-app-version', ['dashboard'], () => app.getVersion());
+handle('get-app-mode', both, () => currentMode);
+handle('get-shortcut-status', ['dashboard'], () => shortcutStatus);
+handle('get-focusable', both, () => store.get('focusable'));
+handle('get-click-through', both, () => store.get('clickThrough'));
+handle('set-focusable', both, value => { store.set('focusable', requireBoolean(value)); settingsChanged(); return value; });
+handle('set-click-through', both, value => { store.set('clickThrough', requireBoolean(value)); settingsChanged(); return value; });
+handle('set-opacity', ['overlay'], value => {
+  if (!Number.isFinite(value)) throw new Error('Invalid opacity');
+  store.set('opacity', value); settingsChanged(); return true;
+});
+handle('set-ignore-mouse-events', ['overlay'], (ignore) => {
+  requireBoolean(ignore);
+  if (!operations.active) overlayWindow.setIgnoreMouseEvents(ignore, { forward: true });
   return true;
 });
-
-ipcMain.handle('get-click-through', () => {
-  return store.get('clickThrough') ?? false;
+handle('hide-window', both, () => { hideWindow(currentWindow()); return true; });
+handle('close-app', both, exitApp);
+handle('launch-overlay', ['dashboard'], () => { launchOverlay(); return true; });
+handle('launch-gemini', ['dashboard'], () => { launchOverlay(); return true; });
+handle('open-dashboard', ['overlay'], () => { showDashboard(); return true; });
+handle('capture-and-attach', ['overlay'], () => runOperation('capture'));
+handle('submit-message', ['overlay'], () => runOperation('submit'));
+handle('operation-complete', ['overlay'], result => operations.complete(overlayWindow, result));
+handle('update-shortcut', ['dashboard'], ({ action, accelerator } = {}) => {
+  if (!Object.hasOwn(DEFAULT_SETTINGS.shortcuts, action)) throw new Error('Unknown shortcut action');
+  return changeShortcuts({ ...store.get('shortcuts'), [action]: accelerator });
+});
+handle('reset-shortcuts', ['dashboard'], () => changeShortcuts({ ...DEFAULT_SETTINGS.shortcuts }));
+handle('pause-shortcuts', ['dashboard'], () => {
+  globalShortcut.unregisterAll(); clearTimeout(pauseTimer);
+  // Recording cannot permanently disable recovery controls if its renderer goes away.
+  pauseTimer = setTimeout(register, 30000); return true;
+});
+handle('resume-shortcuts', ['dashboard'], () => register());
+handle('preview-overlay-size', ['dashboard'], ({ width, height } = {}) => {
+  if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Invalid size');
+  const win = dashboardWindow;
+  previewBounds ??= win.getBounds(); clearTimeout(previewTimer);
+  win.setBounds(visibleBounds({ ...previewBounds, width, height }));
+  previewTimer = setTimeout(() => {
+    if (!win.isDestroyed()) win.setBounds(previewBounds);
+    previewBounds = null;
+  }, 2000); return true;
 });
 
-ipcMain.handle('set-click-through', (_event, enabled) => {
-  store.set('clickThrough', enabled);
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (enabled) {
-      mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    } else {
-      mainWindow.setIgnoreMouseEvents(false);
-    }
-    console.log(`[Glance AI] Click-through set to: ${enabled}`);
-  }
-  return enabled;
-});
-
-ipcMain.handle('launch-gemini', () => {
-  launchGeminiOverlay();
-  return true;
-});
-
-ipcMain.handle('launch-overlay', () => {
-  launchGeminiOverlay();
-  return true;
-});
-
-ipcMain.handle('open-dashboard', () => {
+app.whenReady().then(() => {
+  // app.userAgentFallback and webContents.setUserAgent already cover requests.
+  // Do not send every provider asset/request through a main-process callback.
+  const permissions = createPermissionPolicy();
+  session.defaultSession.setPermissionRequestHandler(async (contents, permission, callback, details) => {
+    const origin = details.requestingUrl || contents.getURL();
+    if (permissions.check(origin, permission, details)) { callback(true); return; }
+    if (!permissions.canRequest(origin, permission)) { callback(false); return; }
+    try {
+      const response = await dialog.showMessageBox({ type: 'question', buttons: ['Deny', 'Allow'], defaultId: 0, cancelId: 0, message: `Allow ${new URL(origin).hostname} to use ${permission}?` });
+      if (response.response === 1) permissions.grant(origin, permission, details);
+      callback(response.response === 1);
+    } catch { callback(false); }
+  });
+  session.defaultSession.setPermissionCheckHandler((_contents, permission, origin, details) => permissions.check(origin, permission, details));
   showDashboard();
-  return true;
+  try { register(); } catch (error) { shortcutStatus = { registered: [], failed: [{ error: error.message }] }; notify('Saved shortcuts are invalid. Reset shortcuts in the dashboard.'); }
+  const recover = () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setBounds(visibleBounds(overlayWindow.getBounds()));
+  };
+  screen.on('display-removed', recover); screen.on('display-metrics-changed', recover);
 });
-
-ipcMain.handle('get-app-mode', () => currentMode);
-
-ipcMain.handle('update-shortcut', (_event, { action, accelerator }) => {
-  const shortcuts = store.get('shortcuts') || {};
-  shortcuts[action] = accelerator;
-  store.set('shortcuts', shortcuts);
-  registerGlobalShortcuts(getMainWindow, toggleDashboard);
-  return store.get('shortcuts');
-});
-
-ipcMain.handle('reset-shortcuts', () => {
-  store.set('shortcuts', { ...DEFAULT_SETTINGS.shortcuts });
-  registerGlobalShortcuts(getMainWindow, toggleDashboard);
-  return store.get('shortcuts');
-});
-
-ipcMain.handle('pause-shortcuts', () => {
-  globalShortcut.unregisterAll();
-  return true;
-});
-
-ipcMain.handle('resume-shortcuts', () => {
-  registerGlobalShortcuts(getMainWindow, toggleDashboard);
-  return true;
-});
-
-ipcMain.handle('preview-overlay-size', async (_event, { width, height }) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return false;
-  const originalBounds = mainWindow.getBounds();
-  const w = Math.max(300, Math.min(1600, parseInt(width, 10) || 520));
-  const h = Math.max(300, Math.min(1400, parseInt(height, 10) || 650));
-  mainWindow.setSize(w, h);
-  mainWindow.center();
-  setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed() && currentMode === 'dashboard') {
-      mainWindow.setBounds(originalBounds);
-    }
-  }, 2000);
-  return true;
-});
-
-
-
+app.on('second-instance', () => restoreWindow(currentWindow(), store.getAll(), currentMode === 'dashboard', true));
+app.on('activate', () => { if (!currentWindow()) showDashboard(); else restoreWindow(currentWindow(), store.getAll(), currentMode === 'dashboard', true); });
+app.on('before-quit', () => { quitting = true; });
+app.on('will-quit', () => { store.flush(); globalShortcut.unregisterAll(); });
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

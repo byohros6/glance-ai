@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Glance AI</title>
   <style>
@@ -644,7 +645,7 @@
       <span>Glance AI</span>
     </div>
     <div class="titlebar-controls" style="-webkit-app-region: no-drag !important;">
-      <button id="btn-close" class="win-btn close" title="Close Glance AI" style="-webkit-app-region: no-drag !important;" onclick="const api=window.glanceai||window.undecgpt;if(api&&api.closeApp){api.closeApp();}else{window.close();}">✕</button>
+      <button id="btn-close" class="win-btn close" title="Close Glance AI" style="-webkit-app-region: no-drag !important;">✕</button>
     </div>
   </div>
 
@@ -809,14 +810,15 @@
         <button id="btn-reset-shortcuts" class="preset-btn" style="font-size: 10px;">Reset Defaults</button>
       </div>
 
-      <table class="shortcuts-table">
+      <p id="shortcut-status" role="status">Checking global shortcuts…</p>
+          <table class="shortcuts-table">
         <tbody id="shortcuts-body">
         </tbody>
       </table>
     </div>
 
     <div class="footer">
-      <span id="footer-version">Glance AI v1.2.0</span>
+      <span id="footer-version">Glance AI</span>
       <span id="footer-save-hint">Settings save automatically</span>
     </div>
   </div>

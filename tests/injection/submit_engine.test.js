@@ -24,6 +24,7 @@ suite.test('Clicks enabled send message button', async () => {
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -50,7 +51,7 @@ suite.test('Clicks enabled send message button', async () => {
   assert.strictEqual(submitResult.sendClicks, initialClicks + 1, 'Send button click listener should increment');
 });
 
-suite.test('Falls back to Enter keydown on editor when send button is disabled', async () => {
+suite.test('Does not bypass a disabled send button', async () => {
   const fallbackResult = await win.webContents.executeJavaScript(`
     (async () => {
       const sendBtn = document.getElementById('send-btn');
@@ -66,8 +67,8 @@ suite.test('Falls back to Enter keydown on editor when send button is disabled',
     })()
   `);
 
-  assert.strictEqual(fallbackResult.ok, true, 'submitPrompt should return true via editor enter fallback');
-  assert.ok(fallbackResult.enterEvents >= 1, 'Enter keydown event must be dispatched to editor');
+  assert.strictEqual(fallbackResult.ok, false, 'A disabled send control must not be bypassed');
+  assert.strictEqual(fallbackResult.enterEvents, 0, 'No fallback is allowed when Send is explicitly disabled');
 });
 
 app.whenReady().then(async () => {
@@ -76,9 +77,9 @@ app.whenReady().then(async () => {
     if (win && !win.isDestroyed()) {
       win.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

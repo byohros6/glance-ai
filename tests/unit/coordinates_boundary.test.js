@@ -1,25 +1,12 @@
 import { app, BrowserWindow, screen } from 'electron';
+import { clampBounds } from '../../src/main/window-state.js';
 import { createTestSuite, assert } from '../helpers/test_suite.js';
 
 const suite = createTestSuite('Tier 2: Off-Screen Coordinates & Movement Bounds');
 
 const MOVE_OFFSET = 40;
 
-function clampCoordinate(coord, min, max) {
-  return Math.max(min, Math.min(max, coord));
-}
-
-function computeClampedWindowBounds(pos, size, displayWorkArea) {
-  const minX = displayWorkArea.x;
-  const maxX = displayWorkArea.x + displayWorkArea.width - size.width;
-  const minY = displayWorkArea.y;
-  const maxY = displayWorkArea.y + displayWorkArea.height - size.height;
-
-  return {
-    x: clampCoordinate(pos.x, minX, maxX),
-    y: clampCoordinate(pos.y, minY, maxY)
-  };
-}
+function computeClampedWindowBounds(pos, size, area) { return clampBounds({ ...pos, ...size }, area); }
 
 let win = null;
 

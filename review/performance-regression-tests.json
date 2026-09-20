@@ -1,0 +1,292 @@
+[
+  {
+    "file": "unit/coordinates_boundary.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Off-Screen Coordinates & Movement Bounds ===\n  ✔ PASS: Clamps negative off-screen coordinates to visible screen edge\n  ✔ PASS: Clamps far-right and far-bottom off-screen coordinates to screen boundary\n  ✔ PASS: Silent nudge move offset calculates ±40px delta precisely\n  ✔ PASS: BrowserWindow sets and updates position accurately\n--- Result: 4 passed, 0 failed (0.02s) ---\n\nGLANCE_TEST_RESULT {\"passed\":4,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.20",
+    "passed": true
+  },
+  {
+    "file": "unit/debounce_concurrency.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Production capture lock and window restoration ===\n  ✔ PASS: Concurrent captures are rejected until the production capture finishes\n  ✔ PASS: Latest state restoration is used and a restoration exception cannot wedge the mutex\n--- Result: 2 passed, 0 failed (0.37s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "[Screenshot] Capture mutex active, debouncing concurrent capture request\n",
+    "seconds": "0.60",
+    "passed": true
+  },
+  {
+    "file": "unit/dpi_scaling.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: scaleFactor DPI Scaling Calculation ===\n  ✔ PASS: Standard 100% DPI scaling (scaleFactor 1.0) preserves physical resolution\n  ✔ PASS: 125% DPI scaling (scaleFactor 1.25) calculates high-resolution capture size\n  ✔ PASS: 150% DPI scaling (scaleFactor 1.50) calculates high-resolution capture size\n  ✔ PASS: 200% DPI scaling (scaleFactor 2.0) calculates 4K capture size\n  ✔ PASS: Odd and fractional scale factors always round to integer pixel dimensions\n  ✔ PASS: Aspect ratio is preserved within 0.005 tolerance across DPI scales\n  ✔ PASS: Primary display query matches high-DPI capture math\n--- Result: 7 passed, 0 failed (0.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":7,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.15",
+    "passed": true
+  },
+  {
+    "file": "unit/opacity_clamping.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Opacity Range Clamping [0.15, 1.0] ===\n  ✔ PASS: Clamps lower boundary values to 0.15 minimum opacity\n  ✔ PASS: Clamps upper boundary values to 1.0 maximum opacity\n  ✔ PASS: Preserves valid in-range opacity values\n  ✔ PASS: Step down shortcut logic clamps at 0.15 and rounds cleanly\n  ✔ PASS: Step up shortcut logic clamps at 1.0 and rounds cleanly\n  ✔ PASS: BrowserWindow applies clamped opacity without error\n--- Result: 6 passed, 0 failed (0.03s) ---\n\nGLANCE_TEST_RESULT {\"passed\":6,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.18",
+    "passed": true
+  },
+  {
+    "file": "unit/operations.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Production capture-to-send transaction ===\n  ✔ PASS: The lock lasts until renderer acknowledgement, and rejects another capture or send\n  ✔ PASS: Cancelled capture cannot inject into a changed conversation\n  ✔ PASS: Missing acknowledgement times out and releases the operation\n  ✔ PASS: Capture failure cannot reach upload or report success\n--- Result: 4 passed, 0 failed (0.05s) ---\n\nGLANCE_TEST_RESULT {\"passed\":4,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.22",
+    "passed": true
+  },
+  {
+    "file": "unit/security_and_runner.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Security boundaries, shortcut validation, and truthful runner results ===\n  ✔ PASS: Permissions require consent and media grants cannot cross origins or devices\n  ✔ PASS: Only exact HTTPS provider and auth origins are accepted\n  ✔ PASS: IPC must come from the designated webContents and its main frame\n  ✔ PASS: Shortcut aliases collide and malformed accelerators are rejected\n  ✔ PASS: Nonzero exit, ten failures, missing result, signal and timeout always fail\n--- Result: 5 passed, 0 failed (0.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":5,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.16",
+    "passed": true
+  },
+  {
+    "file": "unit/store_corrupt_recovery.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Corrupt Store Recovery ===\n  ✔ PASS: Corrupted syntax JSON recovery\n  ✔ PASS: Empty 0-byte file recovery\n  ✔ PASS: Partial JSON file preserves defaults for missing keys\n  ✔ PASS: Store can cleanly save and self-heal after corruption\n--- Result: 4 passed, 0 failed (0.01s) ---\n\nGLANCE_TEST_RESULT {\"passed\":4,\"failed\":0}\n",
+    "stderr": "[Store] Failed to load settings (corrupted JSON). Resetting to defaults: Unexpected token 'm', ...\"n_json\": [missing_br\"... is not valid JSON\n",
+    "seconds": "0.15",
+    "passed": true
+  },
+  {
+    "file": "unit/store_defaults.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Store & Settings Defaults ===\n  ✔ PASS: DEFAULT_SETTINGS defines correct default geometry and stealth settings\n  ✔ PASS: Fresh SettingsStore instance loads all default window geometry and stealth settings\n  ✔ PASS: Store contains complete prompt instructions\n  ✔ PASS: Store contains all 14 WhisprGPT shortcut key bindings\n  ✔ PASS: Store set and get persist key-value pairs\n  ✔ PASS: Store update performs deep merge on shortcuts\n--- Result: 6 passed, 0 failed (0.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":6,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.14",
+    "passed": true
+  },
+  {
+    "file": "window/bounds_persistence.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Window Bounds Persistence ===\n  ✔ PASS: Window resize updates stored dimensions\n  ✔ PASS: Window move updates stored coordinates\n--- Result: 2 passed, 0 failed (0.27s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.50",
+    "passed": true
+  },
+  {
+    "file": "window/non_activating_focus.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 3: Non-Activating Focus Mode Interaction ===\n  ✔ PASS: Window starts with focusable mode and can switch to non-activating\n  ✔ PASS: Restoring focus mode enables focus and updates UI to active\n--- Result: 2 passed, 0 failed (0.57s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "[18084:0919/220149.850:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "0.80",
+    "passed": true
+  },
+  {
+    "file": "window/oauth_popup.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 3: OAuth Popup & External URL Routing ===\n  ✔ PASS: Google OAuth URLs are allowed with standard interactive frame\n  ✔ PASS: External third-party links are denied from overlay window\n  ✔ PASS: OAuth popup interaction preserves overlay setContentProtection status\n  ✔ PASS: All Google auth and Gemini requests route with consistent Chrome UA\n--- Result: 4 passed, 0 failed (0.05s) ---\n\nGLANCE_TEST_RESULT {\"passed\":4,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.21",
+    "passed": true
+  },
+  {
+    "file": "window/preroll_bosskey.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 3: Pre-Roll Hide Delay + Boss Key Interaction ===\n  ✔ PASS: Boss Key instantly hides window, zeros opacity, and disables mouse events\n  ✔ PASS: Boss Key restore recovers visibility, screen-saver level, and stored opacity\n  ✔ PASS: Pre-roll hide smoothly sets opacity to 0 and restores saved opacity\n--- Result: 3 passed, 0 failed (0.17s) ---\n\nGLANCE_TEST_RESULT {\"passed\":3,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.45",
+    "passed": true
+  },
+  {
+    "file": "window/shortcuts_registration.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Global Shortcuts Registration ===\n  ✔ PASS: Registers all 14 global shortcuts with operating system\n  ✔ PASS: Unregisters all shortcuts cleanly\n--- Result: 2 passed, 0 failed (0.03s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.18",
+    "passed": true
+  },
+  {
+    "file": "window/single_instance.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Single Instance Lock Enforcement ===\n  ✔ PASS: Primary process acquires single instance lock\n  ✔ PASS: Second instance notifies primary and terminates\n--- Result: 2 passed, 0 failed (0.57s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.81",
+    "passed": true
+  },
+  {
+    "file": "window/stealth_flags.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Stealth Window Flags & Native OS Integration ===\n  ✔ PASS: Window is created with borderless, transparent, and toolbar flags\n  ✔ PASS: Window has setContentProtection enabled for screen-share stealth\n  ✔ PASS: Window pins to top-most screen-saver z-order level\n  ✔ PASS: Window supports toggling non-activating focus mode (WS_EX_NOACTIVATE)\n  ✔ PASS: Window supports click-through mouse event ignoring with forwarding\n  ✔ PASS: Window supports taskbar exclusion\n--- Result: 6 passed, 0 failed (0.04s) ---\n\nGLANCE_TEST_RESULT {\"passed\":6,\"failed\":0}\n",
+    "stderr": "",
+    "seconds": "0.21",
+    "passed": true
+  },
+  {
+    "file": "window/webrtc_fallback.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: WebRTC Desktop Capturer & PowerShell Fallback ===\n  ✔ PASS: captureScreen executes fallback when desktopCapturer is unavailable or fails\n--- Result: 1 passed, 0 failed (0.56s) ---\n\nGLANCE_TEST_RESULT {\"passed\":1,\"failed\":0}\n",
+    "stderr": "[7884:0919/220152.611:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[7884:0919/220152.611:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[7884:0919/220152.611:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[7884:0919/220152.611:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[7884:0919/220152.634:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[7884:0919/220152.836:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[7884:0919/220152.836:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[7884:0919/220152.836:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[7884:0919/220152.836:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[7884:0919/220152.871:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n",
+    "seconds": "0.81",
+    "passed": true
+  },
+  {
+    "file": "injection/adversarial_injection.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Milestone 2 Injection Challenger: Adversarial DOM Injection & Submit Engine ===\n  ✔ PASS: Production preload loads in its isolated context\n  ✔ PASS: Preload uploadViaTriggerSequence arms main-world interceptor and suppresses native click\n  ✔ PASS: 2-Step Trigger sequence handles dynamic DOM elements and triggers main-world interceptor\n  ✔ PASS: Direct input fallback activates when trigger selectors fail completely\n  ✔ PASS: Synthetic paste fallback dispatches ClipboardEvent when file inputs are missing\n  ✔ PASS: Submit engine retries when send button is initially disabled and clicks when enabled\n  ✔ PASS: Submit engine retries when aria-disabled=\"true\" and succeeds once cleared\n  ✔ PASS: Submit engine respects disabled Send after retries\n  ✔ PASS: Submit engine returns false gracefully if neither send button nor editor exists\n--- Result: 9 passed, 0 failed (6.38s) ---\n\nGLANCE_TEST_RESULT {\"passed\":9,\"failed\":0}\n",
+    "stderr": "[49488:0919/220153.330:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "6.64",
+    "passed": true
+  },
+  {
+    "file": "injection/click_through_hover.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 3: Click-Through ON + Toolbar Hover Interaction ===\n  ✔ PASS: Toolbar hover allows controls clicking during Click-Through mode\n  ✔ PASS: Toolbar leave does NOT enable click-through if mode is OFF\n  ✔ PASS: Hotkeys modal opens, accepts Escape key, and restores click-through if enabled\n--- Result: 3 passed, 0 failed (1.24s) ---\n\nGLANCE_TEST_RESULT {\"passed\":3,\"failed\":0}\n",
+    "stderr": "[24692:0919/220159.994:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "1.49",
+    "passed": true
+  },
+  {
+    "file": "injection/multi_provider.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1/2: Multi-Provider DOM Ingestion, Injection & Submit ===\n  ✔ PASS: Provider detection resolves all 4 domains, mock fixtures, and DOM heuristics\n  ✔ PASS: ChatGPT: Direct paste, prompt injection, send button click & Enter fallback\n  ✔ PASS: Claude: Paste DataTransfer, file input attach, prompt injection & send submit\n  ✔ PASS: Perplexity: File input, dropzone drop, textarea prompt injection & submit\n  ✔ PASS: Universal Fallback: Dispatches synthetic clipboard paste on active focused contenteditable\n--- Result: 5 passed, 0 failed (8.37s) ---\n\nGLANCE_TEST_RESULT {\"passed\":5,\"failed\":0}\n",
+    "stderr": "[36740:0919/220201.458:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n[36740:0919/220201.707:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n[36740:0919/220203.963:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n[36740:0919/220206.536:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n[36740:0919/220209.126:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "8.59",
+    "passed": true
+  },
+  {
+    "file": "injection/paste_fallback.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Direct Input & Synthetic Paste Fallback ===\n  ✔ PASS: Direct input fallback injects screenshot when trigger selectors fail\n  ✔ PASS: Synthetic clipboard paste fallback triggers paste event on editor\n--- Result: 2 passed, 0 failed (1.45s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "[16004:0919/220210.052:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "1.72",
+    "passed": true
+  },
+  {
+    "file": "injection/provider_failures.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Provider negative outcomes and untrusted-page isolation ===\n  ✔ PASS: Missing upload UI cannot report success\n  ✔ PASS: Handled paste is delivered once; never followed by duplicate file injection\n  ✔ PASS: A dispatched click without a send outcome is not success\n  ✔ PASS: Keyboard fallback works when the provider has no send button and confirms submission\n  ✔ PASS: Capture prompt preserves an existing draft\n  ✔ PASS: Pending uploads must finish before readiness is acknowledged\n  ✔ PASS: Real provider origin gets no page bridge and synthetic toolbar actions are ignored\n--- Result: 7 passed, 0 failed (4.95s) ---\n\nGLANCE_TEST_RESULT {\"passed\":7,\"failed\":0}\n",
+    "stderr": "[22948:0919/220211.748:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220211.875:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220212.315:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220213.625:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220215.432:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220215.600:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n[22948:0919/220216.461:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n",
+    "seconds": "5.21",
+    "passed": true
+  },
+  {
+    "file": "injection/stealth_masking.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Stealth Masking (Chrome UA & Webdriver) ===\n  ✔ PASS: Outgoing HTTP request headers spoof Chrome 132 User-Agent\n  ✔ PASS: BrowserWindow webContents sets Chrome 132 User-Agent\n  ✔ PASS: Webdriver masking ensures bot detection flag is not active\n--- Result: 3 passed, 0 failed (0.14s) ---\n\nGLANCE_TEST_RESULT {\"passed\":3,\"failed\":0}\n",
+    "stderr": "[41584:0919/220216.961:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\n",
+    "seconds": "0.44",
+    "passed": true
+  },
+  {
+    "file": "injection/submit_engine.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2: Message Submit Engine ===\n  ✔ PASS: Clicks enabled send message button\n  ✔ PASS: Does not bypass a disabled send button\n--- Result: 2 passed, 0 failed (2.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "[13824:0919/220217.416:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "2.23",
+    "passed": true
+  },
+  {
+    "file": "injection/trigger_sequence.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 2/3: DOM Trigger Sequence & Click Interceptor ===\nUpload Result from DOM: {\n  events: {\n    uploadToolsClicked: 1,\n    fileInputClicked: 0,\n    fileInjected: { name: 'screenshot.png', size: 70, type: 'image/png' },\n    sendClicked: 0,\n    editorInput: '',\n    enterKeyDownDispatched: 0\n  },\n  filesCount: 1\n}\n  ✔ PASS: Upload triggers 2-step sequence and intercepts file input click\n  ✔ PASS: Prompt text injection populates rich-textarea editor\n--- Result: 2 passed, 0 failed (0.85s) ---\n\nGLANCE_TEST_RESULT {\"passed\":2,\"failed\":0}\n",
+    "stderr": "[49860:0919/220219.637:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "1.08",
+    "passed": true
+  },
+  {
+    "file": "e2e/production_app.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Production entry point: isolation, settings, capture and recovery ===\n  ✔ PASS: Ctrl+B opens the overlay once, with no privileged page bridge\n  ✔ PASS: Dashboard round trip preserves conversation URL and draft, and remains interactive\n  ✔ PASS: Hide and second-instance activation restore a visible, usable overlay\n  ✔ PASS: Ctrl+B flushes dashboard edits before launching\n  ✔ PASS: Dashboard reflects focus and opacity changes made through overlay shortcuts\n  ✔ PASS: Main IPC rejects unknown windows, subframes and wrong role\n  ✔ PASS: Send rebinding removes its old key; collision and OS failure roll back\n  ✔ PASS: Real toolbar capture and keyboard capture share verified attachment and auto-submit behavior\n  ✔ PASS: Repeated scroll shortcuts preserve their full distance without animation restart\n--- Result: 9 passed, 0 failed (1.51s) ---\n\nGLANCE_TEST_RESULT {\"passed\":9,\"failed\":0}\n",
+    "stderr": "[29500:0919/220220.886:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\r\nError occurred in handler for 'update-shortcut': Error: Shortcut conflicts with screenshot. Choose a different key combination.\n    at validateShortcuts (file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/shortcuts.js:22:30)\n    at changeShortcuts (file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:89:3)\n    at file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:228:10\n    at file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:193:12\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:123833)\n    at Session.emit (node:events:514:28)\nError occurred in handler for 'update-shortcut': Error: Shortcut unavailable: Alt+F24. Previous bindings restored.\n    at changeShortcuts (file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:94:11)\n    at file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:228:10\n    at file:///C:/Users/benoy/OneDrive/Documents/UndecGPT/src/main/main.js:193:12\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:123833)\n    at Session.emit (node:events:514:28)\n",
+    "seconds": "1.92",
+    "passed": true
+  },
+  {
+    "file": "e2e/simulated_flow.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Tier 4: Real-World End-to-End Workflow Simulation ===\n  ✔ PASS: Step 1: Launch stealth overlay window\n  ✔ PASS: Step 2: Login bypass verification (UA & Webdriver)\n  ✔ PASS: Step 3: Ctrl+S capture & attach WITHOUT message submit\n  ✔ PASS: Step 4: Ctrl+Enter submits the prompt\n  ✔ PASS: Step 5: Boss Key hides overlay instantly\n  ✔ PASS: Step 6: Boss Key restore reveals overlay with full stealth flags\n  ✔ PASS: Step 7: Clean exit and teardown\n--- Result: 7 passed, 0 failed (4.07s) ---\n\nGLANCE_TEST_RESULT {\"passed\":7,\"failed\":0}\n",
+    "stderr": "[51056:0919/220222.698:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n[51056:0919/220223.315:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[51056:0919/220223.315:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[51056:0919/220223.315:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[51056:0919/220223.315:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[51056:0919/220223.329:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[51056:0919/220223.535:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[51056:0919/220223.535:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[51056:0919/220223.535:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[51056:0919/220223.535:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[51056:0919/220223.561:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n",
+    "seconds": "4.35",
+    "passed": true
+  },
+  {
+    "file": "stress/m1_interactive_stress.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Empirical Challenger: Milestone 1 Interactive Hardening ===\n  ✔ PASS: Non-Activating Focus Mode: focus does not leak to overlay on click or programmatic focus\n  ✔ PASS: Click-Through Mode: mouse events forwarded on body, captured on toolbar hover & settings modal\n  ✔ PASS: Store Concurrency: rapid setBounds debounce properly without disk corruption\n  ✔ PASS: Simultaneous Focus & Click-Through IPC interleaving and Store rapid serialization stress\n--- Result: 4 passed, 0 failed (3.19s) ---\n\nGLANCE_TEST_RESULT {\"passed\":4,\"failed\":0}\n",
+    "stderr": "[22100:0919/220228.579:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/renderer_init (2)\r\n",
+    "seconds": "3.55",
+    "passed": true
+  },
+  {
+    "file": "stress/m1_stealth_lifecycle_stress.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Empirical Challenger: Stealth Window Attributes & Process Lifecycle ===\n    -> Win32 Native HWND query result: {\"ExStyle\":2097288,\"Affinity\":17,\"AffinitySuccess\":true}\n  ✔ PASS: Window Attributes: Borderless, transparent, type toolbar, skipTaskbar, contentProtection\n  ✔ PASS: Content Protection: Dynamic toggle updates native affinity correctly\n  ✔ PASS: Boss Key: Hides window completely, zeroes opacity, and enables mouse forwarding\n  ✔ PASS: Boss Key: Restore via showInactive does NOT activate or steal focus from background window\n  ✔ PASS: Boss Key: Rapid toggle stress test (50 cycles) maintains state consistency\n  ✔ PASS: Boss Key: Restore when focusable is false (non-activating mode) never steals focus\n    [child stdout] \n    [child stdout] EMERGENCY_EXIT_EXECUTION_TIME_MS:3\n    -> Child emergency exit terminated in 491ms with exit code 0\n    -> In-process emergency exit execution time: 3ms\n  ✔ PASS: Emergency Kill Switch: Cleanly exits without beforeunload hang in child process\n  ✔ PASS: Emergency Kill Switch: Resilient when window is null or destroyed\n--- Result: 8 passed, 0 failed (5.36s) ---\n\nGLANCE_TEST_RESULT {\"passed\":8,\"failed\":0}\n",
+    "stderr": "    [child stderr] [49172:0919/220235.668:INFO:CONSOLE:2] \"%cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security\r\n  Policy set or a policy with \"unsafe-eval\" enabled. This exposes users of\r\n  this app to unnecessary security risks.\r\n\r\nFor more information and help, consult\r\nhttps://electronjs.org/docs/tutorial/security.\r\nThis warning will not show up\r\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\n",
+    "seconds": "5.71",
+    "passed": true
+  },
+  {
+    "file": "stress/m2_capture_stress.test.js",
+    "code": 0,
+    "signal": null,
+    "timedOut": false,
+    "stdout": "\r\n\n=== Running Suite: Empirical Challenger: Milestone 2 Capture & Pre-Roll Stress Suite ===\n    -> Primary Display: 1536x960 @ scaleFactor 1.25 (Expected capture: 1920x1200)\n    -> Parsed PNG header: 1920x1200, bitDepth: 8, colorType: 2\n  ✔ PASS: desktopCapturer produces full-resolution valid base64 PNG\n    -> PowerShell fallback PNG header: 1920x1200\n  ✔ PASS: PowerShell fallback produces full-resolution base64 PNG when desktopCapturer fails\n  ✔ PASS: PowerShell fallback succeeds when desktopCapturer returns empty list or empty thumbnail\n  ✔ PASS: Pre-roll hide delay smoothly hides overlay before capture and waits >=100ms\n  ✔ PASS: Pre-roll always restores opacity and releases mutex even when capture throws\n  ✔ PASS: Pre-roll correctly respects and restores clickThrough: true and clickThrough: false\n  ✔ PASS: captureScreenWithHide safely handles null or destroyed window\n    -> Firing 30 simultaneous captureScreenWithHide calls...\n    -> Completed: 1 succeeded, 29 debounced by mutex\n  ✔ PASS: Rapid capture spam: isCapturing mutex guards against overlapping captures\n    -> Jitter test results: 1 succeeded out of 9 jittered calls\n  ✔ PASS: Rapid capture with temporal jitter offsets prevents race conditions\n  ✔ PASS: High-DPI scaleFactor math oracle across various scaling factors\n--- Result: 10 passed, 0 failed (9.25s) ---\n\nGLANCE_TEST_RESULT {\"passed\":10,\"failed\":0}\n",
+    "stderr": "[15124:0919/220236.386:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220236.386:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220236.386:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220236.386:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220236.400:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220236.597:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220236.597:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220236.597:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220236.597:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220236.633:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[Screenshot] desktopCapturer failed, trying PowerShell fallback: Adversarially injected desktopCapturer WebRTC failure\n[15124:0919/220239.746:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220239.746:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220239.746:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220239.746:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220239.773:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220240.152:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220240.152:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220240.152:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220240.152:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220240.189:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[Screenshot] desktopCapturer failed, trying PowerShell fallback: Fatal simulated capture crash\n[15124:0919/220241.723:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220241.723:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220241.723:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220241.723:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220241.739:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220242.092:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220242.092:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220242.092:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220242.092:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220242.159:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220242.653:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220242.653:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220242.653:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220242.653:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220242.669:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220243.003:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.003:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220243.003:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.003:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220243.049:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[15124:0919/220243.583:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.583:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220243.583:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.583:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220243.596:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220243.864:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.865:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220243.865:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220243.865:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220243.894:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220244.302:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220244.302:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220244.302:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220244.302:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220244.318:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220244.574:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220244.574:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220244.574:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220244.574:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220244.606:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[15124:0919/220245.013:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220245.013:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220245.013:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220245.013:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[15124:0919/220245.027:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n[15124:0919/220245.275:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220245.275:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 1\r\n[15124:0919/220245.275:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_adapter_duplicator.cc:116] Cannot initialize any DxgiOutputDuplicator instance.\r\n[15124:0919/220245.275:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:286] Failed to initialize DxgiAdapterDuplicator on adapter 2\r\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[Screenshot] Capture mutex active, debouncing concurrent capture request\n[15124:0919/220245.308:WARNING:third_party\\webrtc\\modules\\desktop_capture\\win\\dxgi_duplicator_controller.cc:106] Count of references reaches zero, DxgiDuplicatorController will be unloaded.\r\n",
+    "seconds": "9.48",
+    "passed": true
+  }
+]

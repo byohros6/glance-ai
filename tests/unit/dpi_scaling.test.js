@@ -77,5 +77,5 @@ suite.test('Primary display query matches high-DPI capture math', () => {
 
 app.whenReady().then(async () => {
   const success = await suite.run();
-  process.exit(success ? 0 : 1);
+  app.exit(success ? 0 : 1);
 });

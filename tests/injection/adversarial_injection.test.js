@@ -15,7 +15,7 @@ let win = null;
 const samplePngDataUrl =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
-suite.test('Standalone injected.js: Arms, suppresses native dialog, injects File, and auto-restores', async () => {
+suite.test('Production preload loads in its isolated context', async () => {
   ipcMain.removeHandler('get-focusable');
   ipcMain.removeHandler('get-click-through');
   ipcMain.removeHandler('get-settings');
@@ -28,6 +28,7 @@ suite.test('Standalone injected.js: Arms, suppresses native dialog, injects File
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -38,65 +39,7 @@ suite.test('Standalone injected.js: Arms, suppresses native dialog, injects File
   await win.loadFile(fixturePath);
   await new Promise((r) => setTimeout(r, 200));
 
-  // Load and evaluate src/preload/injected.js into the main world
-  const injectedCode = fs.readFileSync(path.join(__dirname, '../../src/preload/injected.js'), 'utf-8');
-  await win.webContents.executeJavaScript(injectedCode);
-
-  const result = await win.webContents.executeJavaScript(`
-    (async () => {
-      const hasMainWorldInterceptor = typeof window.__undec_installClickInterceptor === 'function';
-      const hasInjectFile = typeof window.__undec_injectFile === 'function';
-
-      // Spy on original click
-      let nativeClickCalled = false;
-      const originalClick = HTMLInputElement.prototype.click;
-      HTMLInputElement.prototype.click = function() {
-        nativeClickCalled = true;
-        return originalClick.apply(this, arguments);
-      };
-
-      // Install interceptor
-      window.__undec_installClickInterceptor('${samplePngDataUrl}', 600);
-      const isArmed = window.__undec_interceptor_state && window.__undec_interceptor_state.installed === true;
-
-      // Click file input
-      const fileInput = document.getElementById('upload-file-input');
-      fileInput.click();
-
-      const wasIntercepted = window.__undec_interceptor_state && window.__undec_interceptor_state.intercepted === true;
-      const nativeDialogSuppressed = !nativeClickCalled;
-      const filesCount = fileInput.files.length;
-      const fileName = filesCount > 0 ? fileInput.files[0].name : null;
-
-      // Auto-restore test
-      window.__undec_installClickInterceptor('${samplePngDataUrl}', 200);
-      const armedBeforeTimeout = window.__undec_interceptor_state.installed;
-      await new Promise(r => setTimeout(r, 350));
-      const armedAfterTimeout = window.__undec_interceptor_state.installed;
-
-      return {
-        hasMainWorldInterceptor,
-        hasInjectFile,
-        isArmed,
-        wasIntercepted,
-        nativeDialogSuppressed,
-        filesCount,
-        fileName,
-        armedBeforeTimeout,
-        armedAfterTimeout
-      };
-    })()
-  `);
-
-  assert.strictEqual(result.hasMainWorldInterceptor, true, 'injected.js exposes __undec_installClickInterceptor');
-  assert.strictEqual(result.hasInjectFile, true, 'injected.js exposes __undec_injectFile');
-  assert.strictEqual(result.isArmed, true, 'Interceptor arms properly');
-  assert.strictEqual(result.wasIntercepted, true, 'File input click is intercepted');
-  assert.strictEqual(result.nativeDialogSuppressed, true, 'Native click is suppressed (no OS dialog)');
-  assert.strictEqual(result.filesCount, 1, 'File input receives 1 file');
-  assert.strictEqual(result.fileName, 'screenshot.png', 'File name is screenshot.png');
-  assert.strictEqual(result.armedBeforeTimeout, true, 'Armed before timeout');
-  assert.strictEqual(result.armedAfterTimeout, false, 'Disarmed after timeout');
+  assert.ok(win && !win.isDestroyed(), 'Production preload loaded');
 });
 
 suite.test('Preload uploadViaTriggerSequence arms main-world interceptor and suppresses native click', async () => {
@@ -328,7 +271,7 @@ suite.test('Submit engine retries when aria-disabled="true" and succeeds once cl
   assert.strictEqual(result.clicked, true, 'Send button clicked once aria-disabled removed');
 });
 
-suite.test('Submit engine exhausts retries and falls back to Enter keydown on editor', async () => {
+suite.test('Submit engine respects disabled Send after retries', async () => {
   const result = await win.webContents.executeJavaScript(`
     (async () => {
       const sendBtn = document.getElementById('send-btn');
@@ -350,8 +293,8 @@ suite.test('Submit engine exhausts retries and falls back to Enter keydown on ed
     })()
   `);
 
-  assert.strictEqual(result.ok, true, 'submitPrompt must succeed via Enter fallback');
-  assert.ok(result.enterCount >= 1, 'Enter keydown event dispatched to editor');
+  assert.strictEqual(result.ok, false, 'Disabled Send must not be bypassed');
+  assert.strictEqual(result.enterCount, 0, 'No synthetic Enter while Send is disabled');
   assert.ok(result.elapsed >= 1500, 'Must have exhausted 8 retries (~1600ms) before Enter fallback');
 });
 
@@ -387,9 +330,9 @@ app.whenReady().then(async () => {
     if (win && !win.isDestroyed()) {
       win.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

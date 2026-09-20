@@ -52,9 +52,9 @@ app.whenReady().then(async () => {
       win.close();
     }
     app.releaseSingleInstanceLock();
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

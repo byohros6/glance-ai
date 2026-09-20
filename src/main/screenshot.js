@@ -19,8 +19,8 @@ export function getIsCapturing() {
 
 /**
  * Captures the screen.
- * Because setContentProtection(true) is active on the Glance AI window,
- * Windows automatically excludes the Glance AI window from capture!
+ * Capture the primary display, preserving the original default behavior.
+ * Capture exclusion is a best-effort platform capability, not a security boundary.
  * @returns {Promise<string|null>} Data URL of the captured screenshot.
  */
 export async function captureScreen() {
@@ -31,22 +31,21 @@ export async function captureScreen() {
   const captureHeight = Math.round(height * scaleFactor);
 
   // Method 1: Electron native desktopCapturer (fast & in-memory)
+  let sourceTimer;
   try {
     const sourcesPromise = desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: captureWidth, height: captureHeight }
     });
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('desktopCapturer timed out after 1500ms')), 1500)
+      sourceTimer = setTimeout(() => reject(new Error('desktopCapturer timed out after 1500ms')), 1500)
     );
     const sources = await Promise.race([sourcesPromise, timeoutPromise]);
 
     if (sources && sources.length > 0) {
       const primaryIdStr = primaryDisplay.id != null ? primaryDisplay.id.toString() : '';
       const primarySource =
-        sources.find((s) => s.display_id === primaryIdStr) ||
-        sources.find((s) => primaryIdStr && s.id && s.id.includes(primaryIdStr)) ||
-        sources[0];
+        sources.find((s) => s.display_id === primaryIdStr);
 
       if (primarySource && primarySource.thumbnail && !primarySource.thumbnail.isEmpty()) {
         const dataUrl = primarySource.thumbnail.toDataURL();
@@ -57,7 +56,7 @@ export async function captureScreen() {
     }
   } catch (err) {
     console.warn('[Screenshot] desktopCapturer failed, trying PowerShell fallback:', err.message);
-  }
+  } finally { clearTimeout(sourceTimer); }
 
   // Method 2: Windows PowerShell CopyFromScreen with DPI Awareness (exact WhisprGPT implementation)
   let tempFile = null;
@@ -67,7 +66,7 @@ export async function captureScreen() {
       `glance_${Date.now()}_${Math.random().toString(36).slice(2)}.png`
     );
 
-    const escapedTempFile = tempFile.replace(/\\/g, '\\\\').replace(/'/g, "''");
+    const escapedTempFile = tempFile.replace(/'/g, "''");
 
     const psScript = `
 $code = @"
@@ -91,7 +90,7 @@ $graphics.Dispose()
 $bmp.Dispose()
 `;
 
-    await execFileAsync('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript]);
+    await execFileAsync('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript], { windowsHide: true, timeout: 10000, maxBuffer: 1024 * 1024 });
     const buffer = await fs.readFile(tempFile);
     return `data:image/png;base64,${buffer.toString('base64')}`;
   } catch (err) {
@@ -145,15 +144,14 @@ export async function captureScreenWithHide(win, options = {}) {
     console.error('[Screenshot] Error during captureScreenWithHide:', err);
     return null;
   } finally {
-    if (win && !win.isDestroyed()) {
-      win.setOpacity(savedOpacity);
-      if (isClickThrough) {
-        win.setIgnoreMouseEvents(true, { forward: true });
-      } else {
-        win.setIgnoreMouseEvents(false);
+    try {
+      if (win && !win.isDestroyed()) {
+        if (options.restoreState) options.restoreState();
+        else {
+          win.setOpacity(savedOpacity);
+          win.setIgnoreMouseEvents(isClickThrough, { forward: true });
+        }
       }
-    }
-    isCapturing = false;
+    } finally { isCapturing = false; }
   }
 }
-

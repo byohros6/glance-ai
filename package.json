@@ -1,17 +1,18 @@
 {
   "name": "glance-ai",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A lightweight, always-on-top workspace companion for AI assistants",
   "main": "src/main/main.js",
   "type": "module",
   "scripts": {
     "start": "electron .",
     "test": "node tests/runner.js",
-    "test:smoke": "electron test_smoke.js",
+    "test:smoke": "node tests/runner.js production_app",
     "test-bench": "node tools/focus-tester/server.js",
     "dist": "electron-builder --win",
     "dist:portable": "electron-builder --win portable",
-    "dist:installer": "electron-builder --win nsis"
+    "dist:installer": "electron-builder --win nsis",
+    "check": "node tools/check.cjs"
   },
   "keywords": [
     "ai",
@@ -66,7 +67,11 @@
     "forceCodeSigning": false,
     "files": [
       "src/**/*",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ]
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

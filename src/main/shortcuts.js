@@ -1,251 +1,89 @@
 import { globalShortcut, app } from 'electron';
-import { captureScreen, captureScreenWithHide } from './screenshot.js';
-import { store } from './store.js';
+import { store, DEFAULT_SETTINGS } from './store.js';
+import { captureScreenWithHide } from './screenshot.js';
+import { OperationCoordinator } from './operations.js';
+import { hideWindow, restoreWindow, applyWindowState, visibleBounds } from './window-state.js';
 
-const MOVE_OFFSET = 40;
-const SCROLL_OFFSET = 320;
+const operations = new OperationCoordinator({ capture: captureScreenWithHide, settings: () => store.getAll(), restore: win => applyWindowState(win, store.getAll()) });
 
-export function registerGlobalShortcuts(getMainWindow, onToggleDashboard = null) {
-  // Clear any existing shortcuts
-  globalShortcut.unregisterAll();
+export function normalizeAccelerator(value) {
+  if (typeof value !== 'string' || value.length > 100) throw new Error('Invalid shortcut');
+  const parts = value.toLowerCase().split('+').map(p => p.trim());
+  const key = parts.pop()?.replace(/^enter$/, 'return');
+  const modifiers = parts.map(p => ({ control: 'ctrl', commandorcontrol: process.platform === 'darwin' ? 'cmd' : 'ctrl', cmdorctrl: process.platform === 'darwin' ? 'cmd' : 'ctrl', command: 'cmd', option: 'alt', meta: 'super' }[p] || p));
+  if (!key || !/^([a-z0-9\[\],.;'\/\\`=\-]|f([1-9]|1[0-9]|2[0-4])|return|space|tab|escape|backspace|delete|insert|home|end|pageup|pagedown|up|down|left|right|plus|minus)$/.test(key) || modifiers.some(p => !['ctrl', 'alt', 'shift', 'cmd', 'super'].includes(p)) || new Set(modifiers).size !== modifiers.length || (!modifiers.some(p => p !== 'shift') && !/^f\d+$/.test(key))) throw new Error('Use Ctrl, Alt, Command, or a function key in the shortcut.');
+  return [...modifiers.sort(), key].join('+');
+}
 
-  const shortcuts = store.get('shortcuts') || {};
+export function validateShortcuts(shortcuts) {
+  const used = new Map();
+  for (const action of Object.keys(DEFAULT_SETTINGS.shortcuts)) {
+    const key = normalizeAccelerator(shortcuts[action]);
+    if (used.has(key)) throw new Error(`Shortcut conflicts with ${used.get(key)}. Choose a different key combination.`);
+    used.set(key, action);
+  }
+  return shortcuts;
+}
 
-  // 1. Screenshot & Attach (Ctrl + S)
-  const snapKey = shortcuts.screenshot || 'CommandOrControl+S';
-  tryRegister(snapKey, async () => {
+export function createShortcutHandlers(getMainWindow, onToggleDashboard, actions = {}) {
+  const change = patch => {
+    store.update(patch, { debounce: true });
     const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-
-    console.log('[Shortcuts] Screenshot triggered (WhisprGPT stealth workflow)');
-
-    const isClickThrough = store.get('clickThrough') ?? false;
-    const storedOpacity = store.get('opacity') || 0.95;
-
-    // Use unified pre-roll capture helper with 100ms compositor wait & capture mutex
-    const dataUrl = await captureScreenWithHide(win, {
-      savedOpacity: win.getOpacity() > 0 ? win.getOpacity() : storedOpacity,
-      clickThrough: isClickThrough,
-      defaultOpacity: storedOpacity
-    });
-
-    if (!dataUrl) {
-      console.warn('[Shortcuts] Capture skipped or returned empty dataUrl');
-      return;
+    if (win && !win.isDestroyed()) {
+      applyWindowState(win, store.getAll());
+      win.webContents.send('action:settings-changed', store.getAll());
     }
-
-    console.log('[Shortcuts] Screenshot captured successfully. Attaching to Gemini...');
-    const prompt = store.get('prompt') || '';
-    const autoSubmit = store.get('autoSubmit') ?? false;
-
-    // Unified single execution path: dispatch IPC action to renderer (prevents double-upload race)
-    win.webContents.send('action:attach-screenshot', {
-      dataUrl,
-      prompt,
-      autoSubmit
-    });
-  });
-
-  // 2. Send Message to Gemini (Ctrl + Enter / Ctrl + Return)
-  const sendKey = shortcuts.send || 'CommandOrControl+Return';
-  const handleSend = async () => {
-    const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-    console.log('[Shortcuts] Send triggered (Ctrl+Enter / Return)');
-
-    // Unified single execution path: dispatch submit action to renderer
-    win.webContents.send('action:submit');
   };
-  tryRegister(sendKey, handleSend);
-  if (sendKey !== 'CommandOrControl+Return' && !globalShortcut.isRegistered('CommandOrControl+Return')) {
-    tryRegister('CommandOrControl+Return', handleSend);
-  }
-  if (sendKey !== 'CommandOrControl+Enter' && !globalShortcut.isRegistered('CommandOrControl+Enter')) {
-    tryRegister('CommandOrControl+Enter', handleSend);
-  }
-
-  // 3. Return Home / Dashboard (Ctrl + B)
-  const homeKey = shortcuts.returnHome || 'CommandOrControl+B';
-  tryRegister(homeKey, () => {
+  const move = (dx, dy) => {
     const win = getMainWindow();
     if (!win || win.isDestroyed()) return;
-    console.log('[Shortcuts] Return Home / Dashboard triggered (Ctrl+B)');
-    win.webContents.send('action:toggle-dashboard');
-    if (typeof onToggleDashboard === 'function') {
-      onToggleDashboard();
-    }
-  });
-
-  // 3. Toggle Focusable Mode (Ctrl + F)
-  const focusKey = shortcuts.toggleFocus || 'CommandOrControl+F';
-  tryRegister(focusKey, () => {
+    const bounds = win.getBounds();
+    const next = visibleBounds({ ...bounds, x: bounds.x + dx, y: bounds.y + dy });
+    win.setBounds(next);
+    store.setBounds(next);
+  };
+  const scroll = amount => {
     const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-    const current = win.isFocusable();
-    const next = !current;
-    win.setFocusable(next);
-    if (!next && win.isFocused()) {
-      win.blur();
-    }
-    store.set('focusable', next);
-    console.log('[Shortcuts] Toggled focusable mode to:', next);
-    win.webContents.send('action:focus-changed', next);
-  });
-
-  // 4. Toggle Click-Through Mode (Ctrl + M)
-  const clickThroughKey = shortcuts.toggleClickThrough || 'CommandOrControl+M';
-  tryRegister(clickThroughKey, () => {
-    const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-    const current = store.get('clickThrough') ?? false;
-    const next = !current;
-    store.set('clickThrough', next);
-    if (next) {
-      win.setIgnoreMouseEvents(true, { forward: true });
-    } else {
-      win.setIgnoreMouseEvents(false);
-    }
-    console.log('[Shortcuts] Toggled click-through mode to:', next);
-    win.webContents.send('action:click-through-changed', next);
-  });
-
-  // 5. Hide / Show Toggle (Boss key)
-  const hideKey = shortcuts.toggleVisibility || 'CommandOrControl+H';
-  tryRegister(hideKey, () => {
-    const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-
-    if (win.isVisible()) {
-      win.setOpacity(0);
-      win.setIgnoreMouseEvents(true, { forward: true });
-      win.hide();
-      console.log('[Shortcuts] Overlay hidden');
-    } else {
-      win.showInactive();
-      win.setAlwaysOnTop(true, 'screen-saver');
-      win.setSkipTaskbar(true);
-      const isUndetectable = store.get('undetectable') !== false;
-      win.setContentProtection(isUndetectable);
-      win.setOpacity(store.get('opacity') || 0.95);
-      if (store.get('clickThrough')) {
-        win.setIgnoreMouseEvents(true, { forward: true });
-      } else {
-        win.setIgnoreMouseEvents(false);
-      }
-      console.log('[Shortcuts] Overlay shown (inactive)');
-    }
-  });
-
-  // 6. Move Up
-  const moveUpKey = shortcuts.moveUp || 'CommandOrControl+Up';
-  tryRegister(moveUpKey, () => {
-    moveWindow(getMainWindow, 0, -MOVE_OFFSET);
-  });
-
-  // 7. Move Down
-  const moveDownKey = shortcuts.moveDown || 'CommandOrControl+Down';
-  tryRegister(moveDownKey, () => {
-    moveWindow(getMainWindow, 0, MOVE_OFFSET);
-  });
-
-  // 8. Move Left
-  const moveLeftKey = shortcuts.moveLeft || 'CommandOrControl+Left';
-  tryRegister(moveLeftKey, () => {
-    moveWindow(getMainWindow, -MOVE_OFFSET, 0);
-  });
-
-  // 9. Move Right
-  const moveRightKey = shortcuts.moveRight || 'CommandOrControl+Right';
-  tryRegister(moveRightKey, () => {
-    moveWindow(getMainWindow, MOVE_OFFSET, 0);
-  });
-
-  // 10. Scroll Chat Up
-  const scrollUpKey = shortcuts.scrollUp || 'CommandOrControl+Shift+Up';
-  tryRegister(scrollUpKey, () => {
-    const win = getMainWindow();
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('action:scroll', -SCROLL_OFFSET);
-    }
-  });
-
-  // 11. Scroll Chat Down
-  const scrollDownKey = shortcuts.scrollDown || 'CommandOrControl+Shift+Down';
-  tryRegister(scrollDownKey, () => {
-    const win = getMainWindow();
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('action:scroll', SCROLL_OFFSET);
-    }
-  });
-
-  // 12. Opacity Down
-  const opDownKey = shortcuts.opacityDown || 'CommandOrControl+[';
-  tryRegister(opDownKey, () => {
-    const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-    const current = win.getOpacity();
-    const next = Math.max(0.15, Math.round((current - 0.1) * 100) / 100);
-    win.setOpacity(next);
-    store.set('opacity', next);
-    win.webContents.send('action:opacity-changed', next);
-    win.webContents.send('action:show-toast', {
-      message: `🔍 Opacity: ${Math.round(next * 100)}%`,
-      type: 'info'
-    });
-  });
-
-  // 13. Opacity Up
-  const opUpKey = shortcuts.opacityUp || 'CommandOrControl+]';
-  tryRegister(opUpKey, () => {
-    const win = getMainWindow();
-    if (!win || win.isDestroyed()) return;
-    const current = win.getOpacity();
-    const next = Math.min(1.0, Math.round((current + 0.1) * 100) / 100);
-    win.setOpacity(next);
-    store.set('opacity', next);
-    win.webContents.send('action:opacity-changed', next);
-    win.webContents.send('action:show-toast', {
-      message: `🔍 Opacity: ${Math.round(next * 100)}%`,
-      type: 'info'
-    });
-  });
-
-  // 14. Emergency Exit
-  const exitKey = shortcuts.emergencyExit || 'CommandOrControl+Shift+Q';
-  tryRegister(exitKey, () => {
-    console.log('[Shortcuts] Emergency Exit triggered');
-    try {
-      globalShortcut.unregisterAll();
+    if (win && !win.isDestroyed()) win.webContents.send('action:scroll', amount);
+  };
+  const opacity = delta => change({ opacity: Math.max(.15, Math.min(1, Math.round((store.get('opacity') + delta) * 100) / 100)) });
+  return {
+    screenshot: () => operations.run(getMainWindow(), 'capture'),
+    send: () => operations.run(getMainWindow(), 'submit'),
+    returnHome: () => onToggleDashboard?.(),
+    toggleFocus: () => change({ focusable: !store.get('focusable') }),
+    toggleClickThrough: () => change({ clickThrough: !store.get('clickThrough') }),
+    toggleVisibility: () => {
       const win = getMainWindow();
-      if (win && !win.isDestroyed()) {
-        win.destroy();
-      }
-    } catch (e) {
-      console.error('[Shortcuts] Error destroying window during emergency exit:', e);
-    }
-    app.exit(0);
-  });
+      if (!win || win.isDestroyed()) return;
+      if (win.isVisible()) hideWindow(win);
+      else restoreWindow(win, store.getAll());
+    },
+    moveUp: () => move(0, -40), moveDown: () => move(0, 40),
+    moveLeft: () => move(-40, 0), moveRight: () => move(40, 0),
+    scrollUp: () => scroll(-320), scrollDown: () => scroll(320),
+    opacityDown: () => opacity(-.1), opacityUp: () => opacity(.1),
+    emergencyExit: () => { store.flush(); globalShortcut.unregisterAll(); app.exit(0); },
+    ...actions
+  };
 }
 
-function moveWindow(getMainWindow, deltaX, deltaY) {
-  const win = getMainWindow();
-  if (!win || win.isDestroyed()) return;
-  const [x, y] = win.getPosition();
-  const newX = x + deltaX;
-  const newY = Math.max(0, y + deltaY);
-  win.setPosition(newX, newY);
-  store.setBounds({ x: newX, y: newY });
-}
-
-function tryRegister(accelerator, handler) {
-  try {
-    const success = globalShortcut.register(accelerator, handler);
-    if (!success) {
-      console.warn(`[Shortcuts] Failed to register accelerator: ${accelerator}`);
-    } else {
-      console.log(`[Shortcuts] Registered: ${accelerator}`);
-    }
-  } catch (err) {
-    console.error(`[Shortcuts] Error registering ${accelerator}:`, err);
+export function registerGlobalShortcuts(getMainWindow, onToggleDashboard = null, actions = {}, shortcuts = store.get('shortcuts')) {
+  validateShortcuts(shortcuts);
+  const handlers = createShortcutHandlers(getMainWindow, onToggleDashboard, actions);
+  globalShortcut.unregisterAll();
+  const result = { registered: [], failed: [] };
+  for (const [action, accelerator] of Object.entries(shortcuts)) {
+    if (!handlers[action]) continue;
+    try {
+      const registered = globalShortcut.register(accelerator, () => {
+        Promise.resolve().then(handlers[action]).catch(error => {
+          console.error(`[Shortcuts] ${action}:`, error);
+          actions.onError?.(error);
+        });
+      });
+      (registered ? result.registered : result.failed).push({ action, accelerator });
+    } catch (error) { result.failed.push({ action, accelerator, error: error.message }); }
   }
+  return result;
 }

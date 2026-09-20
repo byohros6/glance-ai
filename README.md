@@ -1,126 +1,62 @@
 # Glance AI
 
-**An always-on-top, non-intrusive workspace companion for AI assistants.**
+Glance AI keeps Gemini, ChatGPT, Claude, or Perplexity in an always-on-top Windows overlay. It uses the provider's normal website and your existing account.
 
-Glance AI is a lightweight desktop heads-up display (HUD) that keeps your AI companion directly over your active workspace. Designed for developers, researchers, and creators who want instant AI assistance without the friction of constant `Alt + Tab` context switching or losing typing focus in their primary tools.
+## Preserved controls
 
----
+| Shortcut | Action |
+| --- | --- |
+| Ctrl+S | Capture the **primary display** and attach it to the current AI conversation |
+| Ctrl+Enter | Send the current message |
+| Ctrl+B | Switch between the overlay and settings; the conversation stays loaded |
+| Ctrl+F | Toggle direct typing; OFF makes the overlay non-activating |
+| Ctrl+M | Toggle click-through; hover over the toolbar to use its controls |
+| Ctrl+H | Hide/show the current window |
+| Ctrl+Arrows | Move the overlay in 40px steps within a display work area |
+| Ctrl+Shift+Up/Down | Scroll conversation history |
+| Ctrl+[ / Ctrl+] | Adjust opacity between 15% and 100% |
+| Ctrl+Shift+Q | Exit |
 
-## Why Glance AI?
+The existing shortcut defaults are retained. They are global and can intercept ordinary editing shortcuts in other apps. Rebind them in Settings if desired; conflicts and unavailable keys are reported. A successful rebind removes the old binding.
 
-When you are deep in flow—writing code, debugging, analyzing data, or reviewing documents—switching windows breaks your concentration. Glance AI floats cleanly above your display as a lightweight, semi-transparent assistant that never interrupts your active work.
+Capture hands the image to the selected provider's page. Its website may upload the image before you press Send. Auto-submit is optional and waits for an observed attachment preview. Existing draft text is preserved when adding the configured prompt. If an attachment or submission cannot be confirmed, check the conversation before retrying.
 
-- **Zero Alt-Tab Friction**: Keep your AI companion right where you need it. Look up documentation, get architecture guidance, or review code snippets while keeping your eyes on your active editor.
-- **Focus Mode (`Ctrl + F`)**: Interacting with or reading the overlay never steals active input focus or active typing cursors away from your IDE, terminal, or browser. No lost cursor positions, no redundant re-focus clicks.
-- **Click-Through Mode (`Ctrl + M`)**: Allows mouse clicks to pass straight through the overlay to underlying windows, terminals, or documents without having to minimize or move the overlay.
-- **Multi-Provider Architecture**: Seamlessly switch between Google Gemini, OpenAI ChatGPT, Anthropic Claude, and Perplexity from the Settings Dashboard.
-- **Instant Workspace Capture (`Ctrl + S`)**: One keystroke captures your active screen workspace and cleanly attaches it to your AI companion alongside your custom prompt template.
-- **Full Web Capabilities**: Directly connects with official web interfaces—giving you access to your full chat history, custom models, and project spaces using your existing accounts.
-- **Silent Keyboard Navigation**: Reposition the overlay across your screen (`Ctrl + Arrows`), scroll conversation history (`Ctrl + Shift + Arrows`), adjust opacity (`Ctrl + [` / `]`), or toggle visibility (`Ctrl + H`) without touching your mouse.
-- **Configuration Dashboard (`Ctrl + B`)**: Tailor default prompt templates, window dimensions, opacity presets, active AI provider, and custom hotkey bindings to match your preferred setup.
+Settings opens independently of the provider view. Overlay focus and click-through preferences never disable the settings window. Changes save automatically after a short pause; Save Settings flushes immediately and reports write failures.
 
----
+## Run and build
 
-## Global Shortcuts
+Windows with Node.js 22.12 or later is required; CI uses Node 24.
 
-| Shortcut | Action | Description |
-| :--- | :--- | :--- |
-| **`Ctrl + S`** | **Capture Workspace** | Captures active screen context and attaches it with your prompt |
-| **`Ctrl + Enter`** | **Send Message** | Submits your query and workspace capture to your active AI companion |
-| **`Ctrl + F`** | **Focus Mode** | Toggles non-intrusive focus (interacting won't steal focus from active apps) |
-| **`Ctrl + M`** | **Click-Through Mode** | Passes mouse clicks through the overlay to underlying windows |
-| **`Ctrl + H`** | **Toggle Visibility** | Silently hides or shows the overlay |
-| **`Ctrl + B`** | **Dashboard Menu** | Opens the settings and keybinding configuration dashboard |
-| **`Ctrl + ↑ / ↓ / ← / →`** | **Nudge Window** | Moves the overlay 40px in any direction across your display |
-| **`Ctrl + Shift + ↑ / ↓`** | **Scroll History** | Scrolls companion conversation history up or down |
-| **`Ctrl + [`** | **Decrease Opacity** | Dims overlay opacity by 10% (down to 15%) |
-| **`Ctrl + ]`** | **Increase Opacity** | Increases overlay opacity by 10% (up to 100%) |
-| **`Ctrl + Shift + Q`** | **Exit App** | Closes Glance AI immediately |
-
-*All keybindings can be customized in the Settings Dashboard (`Ctrl + B`).*
-
----
-
-## Quick Start
-
-### 1. Pre-Built Binaries (Windows x64 — v1.2.0)
-Download the latest pre-compiled binaries from the `dist/` directory or GitHub Releases:
-- **Interactive Setup Wizard**: [`dist/Glance-AI-Setup-1.2.0.exe`](dist/Glance-AI-Setup-1.2.0.exe) (Recommended: interactive installation wizard with custom destination directory, shortcuts, and completion controls)
-- **Standalone Portable**: [`dist/Glance-AI-Portable-1.2.0.exe`](dist/Glance-AI-Portable-1.2.0.exe) (Zero installation, cached directory unpacking)
-
-### 2. Running from Source
-Ensure you have [Node.js](https://nodejs.org/) installed:
-
-```bash
-# Clone the repository
-git clone https://github.com/byohros6/glance-ai.git
-cd glance-ai
-
-# Install dependencies
-npm install
-
-# Start in development mode
+```sh
+npm ci
 npm start
-```
-*(Or double-click `run.bat`)*
-
-### 3. Building Your Own Executable
-To package a standalone `.exe` for Windows:
-```bash
+npm run check
+npm test
+npm run test:smoke
 npm run dist
 ```
-*(Or double-click `build.bat`)*
 
----
+`run.bat` launches the app. `build.bat` checks syntax, runs the tests, and builds the installer and portable executable, stopping on failure. Outputs are under `dist/` and are intentionally not committed. Configure electron-builder signing credentials for signed distribution; local builds can remain unsigned. Building does not publish a release.
 
-## Workspace Event Test Bench
+The diagnostic focus bench is available with `npm run test-bench` or `open-test-bench.bat`.
 
-Glance AI includes a built-in browser diagnostic tool to verify that the overlay preserves your active editor focus and passes clicks through properly:
+## Reliability and security
 
-- Double-click **`open-test-bench.bat`**, or
-- Run `npm run test-bench`, or
-- Open `tools/focus-tester/index.html` in Google Chrome.
+- Remote provider pages have no application-control or screen-capture JavaScript bridge. Toolbar commands run in an isolated preload and reject synthetic page events.
+- Main-process controls validate the exact window, main frame, and allowed URL. Authentication popups have a separate preload with no app capabilities; external protocols are restricted.
+- Capture, attachment, prompt insertion, and optional submission form one bounded operation shared by the toolbar and shortcuts. Navigation cancels the operation.
+- The primary-display capture fallback has a timeout. Window bounds recover when displays change.
+- The local dashboard uses a Content Security Policy. Permission-sensitive website features ask before access.
+- Windows capture exclusion is best-effort. It is not a guarantee of undetectability or protection against every capture method.
 
-The test bench provides real-time telemetry on window focus/blur events, click pass-through hit counters, and keystroke logging.
+Provider interfaces can change. The automated suite uses local fixtures, including failure and delayed-upload scenarios; it does not claim to validate current authenticated sessions on all four live services. Unsupported page layouts produce an unconfirmed-result message rather than a false success.
 
----
+## Project layout
 
-## Automated Test Suite
+- `src/main/`: application lifecycle, settings persistence, IPC authorization, window state, shortcuts, and capture operation coordination.
+- `src/preload/preload.cjs`: single canonical preload; provider adapters and overlay toolbar. Only the local dashboard receives the settings bridge.
+- `src/preload/auth.cjs`: capability-free authentication preload.
+- `src/renderer/`: dashboard.
+- `tests/`: unit, native-window, provider-fixture, production-entry integration, and stress tests. See `TEST_INFRA.md`.
 
-Run the full automated test suite covering store persistence, window interactions, shortcut management, and multi-provider routing:
-
-```bash
-npm test
-```
-
----
-
-## Architecture Overview
-
-```
-glance-ai/
-├── src/                          # Application Source
-│   ├── main/                     # Main process (window lifecycle, multi-provider routing, shortcuts)
-│   ├── preload/                  # Sandboxed bridge & UI toolbar
-│   └── renderer/                 # Glassmorphic settings dashboard
-│
-├── tools/                        # Developer & Diagnostic Utilities
-│   └── focus-tester/             # Standalone browser event monitor
-│
-├── tests/                        # 4-Tier Automated Test Suite (21 Suites)
-│   ├── unit/                     # Store, DPI, and math tests
-│   ├── window/                   # Window flags, shortcuts, OAuth routing tests
-│   ├── injection/                # DOM upload sequence & submit engine tests
-│   └── e2e/                      # Simulated workflow end-to-end test
-│
-├── open-test-bench.bat           # 1-Click launcher for browser test bench
-├── run.bat                       # 1-Click launcher for development
-├── build.bat                     # 1-Click build script for portable executable
-└── package.json                  # Project manifest and build configuration
-```
-
----
-
-## License
-
-MIT License. Free and open source for personal and commercial productivity.
+MIT licensed; see `LICENSE`.

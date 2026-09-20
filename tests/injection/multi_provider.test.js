@@ -28,6 +28,7 @@ async function loadFixture(fixtureName) {
       show: false,
       webPreferences: {
         preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false
@@ -139,8 +140,8 @@ suite.test('ChatGPT: Direct paste, prompt injection, send button click & Enter f
     })()
   `);
 
-  assert.strictEqual(fallbackResult.ok, true, 'submitPrompt fallback must return true');
-  assert.ok(fallbackResult.enterEvents >= 1, 'Enter keydown event must be dispatched to ChatGPT editor');
+  assert.strictEqual(fallbackResult.ok, false, 'A disabled send control must not be bypassed');
+  assert.strictEqual(fallbackResult.enterEvents, 0, 'No fallback is allowed when Send is explicitly disabled');
 });
 
 // 3. Claude Ingestion, Injection & Submission
@@ -219,8 +220,8 @@ suite.test('Claude: Paste DataTransfer, file input attach, prompt injection & se
     })()
   `);
 
-  assert.strictEqual(fallbackResult.ok, true, 'Claude submit fallback must return true');
-  assert.ok(fallbackResult.enterEvents >= 1, 'Enter keydown event must be dispatched to Claude ProseMirror');
+  assert.strictEqual(fallbackResult.ok, false, 'A disabled send control must not be bypassed');
+  assert.strictEqual(fallbackResult.enterEvents, 0, 'No fallback is allowed when Send is explicitly disabled');
 });
 
 // 4. Perplexity Ingestion, Injection & Submission
@@ -300,8 +301,8 @@ suite.test('Perplexity: File input, dropzone drop, textarea prompt injection & s
     })()
   `);
 
-  assert.strictEqual(fallbackResult.ok, true, 'Perplexity submit fallback must return true');
-  assert.ok(fallbackResult.enterEvents >= 1, 'Enter keydown event must be dispatched to Perplexity textarea');
+  assert.strictEqual(fallbackResult.ok, false, 'A disabled send control must not be bypassed');
+  assert.strictEqual(fallbackResult.enterEvents, 0, 'No fallback is allowed when Send is explicitly disabled');
 });
 
 // 5. Universal Fallback Paste Mechanics
@@ -328,7 +329,7 @@ suite.test('Universal Fallback: Dispatches synthetic clipboard paste on active f
 
       editor.focus();
 
-      const ok = window.upload.fallbackSyntheticPaste('${samplePngDataUrl}');
+      const ok = await window.upload.fallbackSyntheticPaste('${samplePngDataUrl}');
 
       return {
         ok,
@@ -338,7 +339,7 @@ suite.test('Universal Fallback: Dispatches synthetic clipboard paste on active f
     })()
   `);
 
-  assert.strictEqual(fallbackResult.ok, true, 'fallbackSyntheticPaste must return true');
+  assert.strictEqual(fallbackResult.ok, true, 'Visible attachment confirms the paste');
   assert.strictEqual(fallbackResult.pasteReceived, true, 'Active focused element must receive synthetic paste event');
   assert.strictEqual(fallbackResult.pastedName, 'screenshot.png', 'Clipboard data must contain standard PNG file blob');
 });
@@ -349,9 +350,9 @@ app.whenReady().then(async () => {
     if (win && !win.isDestroyed()) {
       win.close();
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

@@ -111,7 +111,7 @@ app.whenReady().then(async () => {
     store.flush();
 
     const success = await suite.run();
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } finally {
     if (fs.existsSync(tempSettingsFile)) {
       try { fs.unlinkSync(tempSettingsFile); } catch (e) {}

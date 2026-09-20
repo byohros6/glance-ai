@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import os from 'node:os';
+import { applyWindowState } from '../../src/main/window-state.js';
 import { SettingsStore, DEFAULT_SETTINGS } from '../../src/main/store.js';
 import { createTestSuite, assert } from '../helpers/test_suite.js';
 
@@ -39,6 +40,7 @@ suite.test('Non-Activating Focus Mode: focus does not leak to overlay on click o
     type: 'toolbar',
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -85,11 +87,15 @@ suite.test('Non-Activating Focus Mode: focus does not leak to overlay on click o
   assert.strictEqual(bgWin.isFocused(), false, 'Background app loses focus when overlay is focused interactively');
 
   // 6. Toggle overlay back to focusable: false (non-activating mode)
-  overlayWin.setFocusable(false);
+  applyWindowState(overlayWin, { ...DEFAULT_SETTINGS, focusable: false });
   bgWin.focus();
   await new Promise((r) => setTimeout(r, 150));
   assert.strictEqual(overlayWin.isFocusable(), false, 'Overlay is non-activating again');
-  assert.strictEqual(bgWin.isFocused(), true, 'Background app has focus restored');
+  assert.strictEqual(overlayWin.isFocused(), false, 'Disabling interaction must release overlay focus');
+  // Windows chooses the foreground destination when an active window becomes
+  // non-activating. It may choose another desktop app, and may reject focus().
+  // Verify our promise: subsequent overlay clicks do not change that choice.
+  const backgroundFocusedAfterToggle = bgWin.isFocused();
 
   // 7. Click overlay again to verify non-activating stealth holds
   overlayWin.webContents.sendInputEvent({
@@ -108,7 +114,7 @@ suite.test('Non-Activating Focus Mode: focus does not leak to overlay on click o
   });
   await new Promise((r) => setTimeout(r, 150));
   assert.strictEqual(overlayWin.isFocused(), false, 'Overlay still does NOT steal focus on click');
-  assert.strictEqual(bgWin.isFocused(), true, 'Background app continues to hold focus undisturbed');
+  assert.strictEqual(bgWin.isFocused(), backgroundFocusedAfterToggle, 'Overlay clicks preserve the background focus state');
 
   // 8. Stress-test rapid toggling (100 rapid toggles)
   let focusState = false;
@@ -222,12 +228,12 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
       const modal = document.getElementById('undec-modal-overlay');
       return {
         exists: !!modal,
-        promptVal: modal ? modal.querySelector('#modal-prompt').value : null,
-        focusableChecked: modal ? modal.querySelector('#modal-focusable').checked : null
+        hasDashboardControl: !!modal?.querySelector('#modal-dashboard-btn')
       };
     })()
   `);
-  assert.strictEqual(modalState.exists, true, 'Settings modal #undec-modal-overlay must be open in DOM');
+  assert.strictEqual(modalState.exists, true, 'Hotkeys modal must be open');
+  assert.strictEqual(modalState.hasDashboardControl, true, 'Hotkeys modal provides access to settings');
 
   const modalOpenCall = mouseEventsCalls[mouseEventsCalls.length - 1];
   assert.strictEqual(modalOpenCall.ignore, false, 'Opening settings modal must set ignore=false to capture clicks');
@@ -428,9 +434,9 @@ app.whenReady().then(async () => {
     if (testStorePath && fs.existsSync(testStorePath)) {
       try { fs.unlinkSync(testStorePath); } catch (e) {}
     }
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error('Test runner fatal error:', err);
-    process.exit(1);
+    app.exit(1);
   }
 });

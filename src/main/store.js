@@ -48,6 +48,7 @@ export class SettingsStore {
     }
     this.settings = { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SETTINGS.shortcuts } };
     this._saveTimer = null;
+    this.lastError = null;
     if (typeof process !== 'undefined' && process && typeof process.on === 'function') {
       process.on('exit', () => {
         this.flush();
@@ -63,10 +64,10 @@ export class SettingsStore {
     const clean = { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SETTINGS.shortcuts } };
 
     if (Number.isFinite(raw.windowWidth) && raw.windowWidth >= 200) {
-      clean.windowWidth = Math.round(raw.windowWidth);
+      clean.windowWidth = Math.min(4096, Math.round(raw.windowWidth));
     }
     if (Number.isFinite(raw.windowHeight) && raw.windowHeight >= 200) {
-      clean.windowHeight = Math.round(raw.windowHeight);
+      clean.windowHeight = Math.min(4096, Math.round(raw.windowHeight));
     }
     clean.x = Number.isFinite(raw.x) ? Math.round(raw.x) : null;
     clean.y = Number.isFinite(raw.y) ? Math.round(raw.y) : 60;
@@ -78,13 +79,15 @@ export class SettingsStore {
     if (typeof raw.focusable === 'boolean') clean.focusable = raw.focusable;
     if (typeof raw.clickThrough === 'boolean') clean.clickThrough = raw.clickThrough;
     if (typeof raw.autoSubmit === 'boolean') clean.autoSubmit = raw.autoSubmit;
-    if (typeof raw.prompt === 'string') clean.prompt = raw.prompt;
+    if (typeof raw.prompt === 'string') clean.prompt = raw.prompt.slice(0, 50000);
     if (typeof raw.provider === 'string' && SUPPORTED_PROVIDERS.includes(raw.provider.toLowerCase())) {
       clean.provider = raw.provider.toLowerCase();
     }
 
     if (raw.shortcuts && typeof raw.shortcuts === 'object' && !Array.isArray(raw.shortcuts)) {
-      clean.shortcuts = { ...DEFAULT_SETTINGS.shortcuts, ...raw.shortcuts };
+      for (const key of Object.keys(DEFAULT_SETTINGS.shortcuts)) {
+        if (typeof raw.shortcuts[key] === 'string' && raw.shortcuts[key].trim() && raw.shortcuts[key].length <= 100) clean.shortcuts[key] = raw.shortcuts[key];
+      }
     }
     return clean;
   }
@@ -108,17 +111,23 @@ export class SettingsStore {
   }
 
   save() {
-    if (!this.filePath) return;
+    if (!this.filePath) return true;
+    let tempPath;
     try {
       const dir = path.dirname(this.filePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      const tempPath = `${this.filePath}.tmp.${Date.now()}`;
+      tempPath = `${this.filePath}.tmp.${process.pid}.${Date.now()}`;
       fs.writeFileSync(tempPath, JSON.stringify(this.settings, null, 2), 'utf-8');
       fs.renameSync(tempPath, this.filePath);
+      this.lastError = null;
+      return true;
     } catch (err) {
+      if (tempPath) { try { fs.unlinkSync(tempPath); } catch {} }
+      this.lastError = err;
       console.error('[Store] Failed to save settings:', err);
+      return false;
     }
   }
 
@@ -141,7 +150,7 @@ export class SettingsStore {
   }
 
   get(key) {
-    return this.settings[key];
+    return key === 'shortcuts' ? { ...this.settings.shortcuts } : this.settings[key];
   }
 
   getAll() {
@@ -149,7 +158,8 @@ export class SettingsStore {
   }
 
   set(key, value) {
-    this.settings[key] = value;
+    if (!Object.hasOwn(DEFAULT_SETTINGS, key)) throw new Error('Unknown setting');
+    this.settings = this.sanitize({ ...this.settings, [key]: value });
     this.saveDebounced(250);
   }
 
@@ -165,7 +175,8 @@ export class SettingsStore {
     this.saveDebounced(250);
   }
 
-  update(newSettings) {
+  update(newSettings, { debounce = false } = {}) {
+    if (!newSettings || typeof newSettings !== 'object' || Array.isArray(newSettings)) throw new TypeError('Settings must be an object');
     this.settings = this.sanitize({
       ...this.settings,
       ...newSettings,
@@ -174,7 +185,13 @@ export class SettingsStore {
         ...(newSettings.shortcuts || {})
       }
     });
-    this.save();
+    if (debounce) this.saveDebounced();
+    else {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = null;
+      if (!this.save()) throw new Error('Settings could not be saved to disk.');
+    }
+    return this.getAll();
   }
 }
 

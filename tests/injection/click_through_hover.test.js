@@ -45,6 +45,7 @@ suite.test('Toolbar hover allows controls clicking during Click-Through mode', a
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../../src/preload/preload.cjs'),
+      additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -178,9 +179,9 @@ app.whenReady().then(async () => {
     }
     store.set('clickThrough', false);
     store.flush();
-    process.exit(success ? 0 : 1);
+    app.exit(success ? 0 : 1);
   } catch (err) {
     console.error(err);
-    process.exit(1);
+    app.exit(1);
   }
 });

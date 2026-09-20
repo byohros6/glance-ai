@@ -40,6 +40,7 @@ class TestRunner {
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`--- Result: ${this.passed} passed, ${this.failed} failed (${duration}s) ---\n`);
+    console.log('GLANCE_TEST_RESULT ' + JSON.stringify({ passed: this.passed, failed: this.failed }));
 
     if (this.failed > 0) {
       return false;

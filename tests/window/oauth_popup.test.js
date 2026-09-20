@@ -72,8 +72,8 @@ suite.test('External third-party links are denied from overlay window', () => {
 
 suite.test('OAuth popup interaction preserves overlay setContentProtection status', () => {
   win.setContentProtection(true);
-  if (typeof win.getContentProtection === 'function') {
-    assert.strictEqual(win.getContentProtection(), true, 'Overlay content protection must be true');
+  if (typeof win.isContentProtected === 'function') {
+    assert.strictEqual(win.isContentProtected(), true, 'Overlay content protection must be true');
   }
 
   // Create child OAuth popup window with interactive frame
@@ -85,8 +85,8 @@ suite.test('OAuth popup interaction preserves overlay setContentProtection statu
   });
 
   // Verify overlay content protection is preserved
-  if (typeof win.getContentProtection === 'function') {
-    assert.strictEqual(win.getContentProtection(), true, 'Overlay content protection preserved with OAuth child');
+  if (typeof win.isContentProtected === 'function') {
+    assert.strictEqual(win.isContentProtected(), true, 'Overlay content protection preserved with OAuth child');
   }
 
   if (oauthChild && !oauthChild.isDestroyed()) {
