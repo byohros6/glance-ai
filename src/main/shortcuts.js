@@ -77,10 +77,15 @@ export function registerGlobalShortcuts(getMainWindow, onToggleDashboard = null,
     if (!handlers[action]) continue;
     try {
       const registered = globalShortcut.register(accelerator, () => {
-        Promise.resolve().then(handlers[action]).catch(error => {
+        const reportError = error => {
           console.error(`[Shortcuts] ${action}:`, error);
           actions.onError?.(error);
-        });
+        };
+        // Native hotkey callbacks do not reliably flush queued microtasks until
+        // another event-loop wakeup. Perform synchronous controls immediately;
+        // observe promise rejection only after starting async capture/send work.
+        try { Promise.resolve(handlers[action]()).catch(reportError); }
+        catch (error) { reportError(error); }
       });
       (registered ? result.registered : result.failed).push({ action, accelerator });
     } catch (error) { result.failed.push({ action, accelerator, error: error.message }); }

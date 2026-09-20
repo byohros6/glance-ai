@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2
+
+- Run global shortcut actions immediately in their native callback, instead of deferring them to a promise microtask. Async capture/send rejection handling remains intact.
+- Reproduced a real Windows Ctrl+Left delay: 574 ms from injected key to position update before, 14 ms after (native callback dispatch portion: 562 ms to 1 ms). This is a local sample, not a latency guarantee.
+- Add a regression that checks Ctrl+Left/Right change position before their callback returns, and a standalone Windows shortcut latency probe.
+- Provider UI, movement distance, shortcut bindings, and focus behavior are unchanged.
+- Validation: all 29 suites passed on the final run; packaged production integration passed. The final packaged code measured 13 ms key-to-position latency in the native probe.
+
 ## 1.2.1
 
 - Harden provider IPC, navigation, permissions, and capture operations.

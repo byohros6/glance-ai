@@ -52,6 +52,15 @@ suite.test('Hide and second-instance activation restore a visible, usable overla
   app.emit('second-instance');
   assert.equal(win.isVisible(), true); assert.ok(win.getOpacity() >= .15);
 });
+suite.test('Move shortcuts apply during the native callback, without waiting for microtasks', () => {
+  const win = windows().overlayWindow;
+  const area = screen.getPrimaryDisplay().workArea;
+  win.setPosition(area.x + 100, area.y + 100);
+  shortcuts.get('CommandOrControl+Left')();
+  assert.equal(win.getBounds().x, area.x + 60);
+  shortcuts.get('CommandOrControl+Right')();
+  assert.equal(win.getBounds().x, area.x + 100);
+});
 suite.test('Ctrl+B flushes dashboard edits before launching', async () => {
   main.showDashboard();
   await dashboard("queueSettings({prompt:'Saved before launch'});");

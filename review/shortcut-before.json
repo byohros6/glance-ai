@@ -1,0 +1,10 @@
+{
+  "pressedAt": 1789870430065,
+  "deliveredAt": 1789870430077,
+  "movedAt": 1789870430639,
+  "keyDeliveryMs": 12,
+  "dispatchDelayMs": 562,
+  "keyToMoveMs": 574,
+  "actualX": 60,
+  "expectedX": 60
+}
