@@ -1,6 +1,6 @@
 # Glance AI architecture
 
-Glance AI is a Windows desktop companion for Gemini, ChatGPT, Claude, and Perplexity. The historical UndecGPT specifications in ORIGINAL_REQUEST.md describe the project's origins, not guarantees of invisibility or measured coverage.
+Glance AI is an always-on-top Windows desktop workspace companion for Gemini, ChatGPT, Claude, and Perplexity.
 
 ## Window ownership
 
@@ -8,7 +8,7 @@ The main process owns a persistent provider overlay and a separate local setting
 
 ## Trust boundaries
 
-`security.js` validates HTTPS provider/auth origins and the exact IPC sender and main frame. `preload.cjs` exposes the settings API only on the local dashboard. Remote provider pages receive no `glanceai`, `undecgpt`, or `upload` bridge. Toolbar listeners reject synthetic events. An explicitly enabled local fixture API is available to tests only (`--glance-test-api` plus a file-backed mock page); production windows never pass that argument.
+`security.js` validates HTTPS provider/auth origins and the exact IPC sender and main frame. `preload.cjs` exposes the settings API only on the local dashboard. Remote provider pages receive no `glanceai` or `upload` bridge. Toolbar listeners reject synthetic events. An explicitly enabled local fixture API is available to tests only (`--glance-test-api` plus a file-backed mock page); production windows never pass that argument.
 
 Auth popups use `auth.cjs`, which exposes nothing. Unexpected navigation is prevented. Only HTTP(S) links can be handed to the default browser. Website permission requests are restricted by origin and require an explicit decision.
 
