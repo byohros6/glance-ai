@@ -41,7 +41,7 @@ export class SettingsStore {
       this.filePath = customPath;
     } else if (app) {
       const primaryPath = path.join(app.getPath('userData'), 'glance_settings.json');
-      const legacyPath = path.join(app.getPath('userData'), 'undecgpt_settings.json');
+      const legacyPath = path.join(app.getPath('userData'), 'glance_legacy_settings.json');
       this.filePath = !fs.existsSync(primaryPath) && fs.existsSync(legacyPath) ? legacyPath : primaryPath;
     } else {
       this.filePath = null;

@@ -73,12 +73,12 @@ suite.test('Step 1: Launch stealth overlay window', async () => {
   }
 
   const hasToolbar = await win.webContents.executeJavaScript(`
-    !!document.getElementById('undecgpt-toolbar')
+    !!document.getElementById('glance-toolbar')
   `);
-  assert.strictEqual(hasToolbar, true, 'Stealth toolbar must be injected into DOM');
+  assert.strictEqual(hasToolbar, true, 'Overlay toolbar must be injected into DOM');
 });
 
-suite.test('Step 2: Login bypass verification (UA & Webdriver)', async () => {
+suite.test('Step 2: Browser compatibility verification (UA & Webdriver)', async () => {
   const check = await win.webContents.executeJavaScript(`
     (() => {
       return {
@@ -89,7 +89,7 @@ suite.test('Step 2: Login bypass verification (UA & Webdriver)', async () => {
   `);
 
   assert.strictEqual(check.isWebdriver, false, 'navigator.webdriver must not report automation');
-  assert.ok(check.userAgent.includes('Chrome/132'), 'User-Agent must spoof Chrome 132');
+  assert.ok(check.userAgent.includes('Chrome/132'), 'User-Agent must match Chrome 132');
 });
 
 suite.test('Step 3: Ctrl+S capture & attach WITHOUT message submit', async () => {
@@ -149,16 +149,16 @@ suite.test('Step 4: Ctrl+Enter submits the prompt', async () => {
   assert.ok(sendClicks >= 1, 'Send button must be clicked by submit action');
 });
 
-suite.test('Step 5: Boss Key hides overlay instantly', () => {
+suite.test('Step 5: Visibility toggle hides overlay instantly', () => {
   win.setOpacity(0);
   win.setIgnoreMouseEvents(true, { forward: true });
   win.hide();
 
-  assert.strictEqual(win.isVisible(), false, 'Window must be hidden after Boss Key');
+  assert.strictEqual(win.isVisible(), false, 'Window must be hidden after visibility toggle');
   assert.strictEqual(win.getOpacity(), 0, 'Window opacity must be 0 when hidden');
 });
 
-suite.test('Step 6: Boss Key restore reveals overlay with full stealth flags', () => {
+suite.test('Step 6: Visibility toggle restore reveals overlay with full window flags', () => {
   win.show();
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setSkipTaskbar(true);

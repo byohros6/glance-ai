@@ -24,7 +24,7 @@ suite.test('Ctrl+B opens the overlay once, with no privileged page bridge', asyn
   shortcuts.get('CommandOrControl+B')();
   await until(async () => {
     const win = windows().overlayWindow;
-    return win && !win.webContents.isLoading() && (await win.webContents.executeJavaScript('!!document.getElementById("undec-snap-btn")'));
+    return win && !win.webContents.isLoading() && (await win.webContents.executeJavaScript('!!document.getElementById("glance-snap-btn")'));
   });
   assert.equal(windows().dashboardWindow.isVisible(), false);
   const win = windows().overlayWindow;
@@ -119,7 +119,7 @@ suite.test('Real toolbar capture and keyboard capture share verified attachment 
   await dashboard("window.glanceai.saveSettings({autoSubmit:true,prompt:'Capture prompt'})");
   main.launchOverlay();
   const win = windows().overlayWindow;
-  const rect = await win.webContents.executeJavaScript("(() => {const r=document.getElementById('undec-snap-btn').getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()");
+  const rect = await win.webContents.executeJavaScript("(() => {const r=document.getElementById('glance-snap-btn').getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()");
   win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...rect });
   win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...rect });
   await until(async () => await win.webContents.executeJavaScript('window.__testEvents.sendClicked === 1'));

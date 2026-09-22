@@ -42,7 +42,6 @@ const glanceApi = {
 };
 
 if (isDashboard || testMode) {
-  contextBridge.exposeInMainWorld('undecgpt', glanceApi);
   contextBridge.exposeInMainWorld('glanceai', glanceApi);
 }
 
@@ -185,7 +184,7 @@ async function installMainWorldClickInterceptor(dataUrl) {
   await webFrame.executeJavaScript(`(() => {
     const original = HTMLInputElement.prototype.click;
     const state = { intercepted: false, installed: true, token: ${JSON.stringify(token)} };
-    window.__undec_interceptor_state = state;
+    window.__glance_interceptor_state = state;
     const dataUrlToFile = ${dataUrlToFile.toString()};
     const injectFileFromDataUrl = ${injectFileFromDataUrl.toString()};
     const patched = function(...args) {
@@ -201,7 +200,7 @@ async function installMainWorldClickInterceptor(dataUrl) {
     HTMLInputElement.prototype.click = patched;
     setTimeout(restore, 3500);
   })()`);
-  return async () => { await webFrame.executeJavaScript(`if (window.__undec_interceptor_state?.token === ${JSON.stringify(token)}) window.__undec_interceptor_state.restore();`).catch(() => {}); };
+  return async () => { await webFrame.executeJavaScript(`if (window.__glance_interceptor_state?.token === ${JSON.stringify(token)}) window.__glance_interceptor_state.restore();`).catch(() => {}); };
 }
 async function uploadViaTriggerSequence(strategy, dataUrl) {
   const provider = detectActiveProvider();
@@ -219,7 +218,7 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
         try {
           element.click();
           await delay(strategy.clickGapMs ?? 400);
-          attempted = await webFrame.executeJavaScript('!!window.__undec_interceptor_state?.intercepted');
+          attempted = await webFrame.executeJavaScript('!!window.__glance_interceptor_state?.intercepted');
         } finally { await restore(); }
       }
     } else { element.click(); await delay(strategy.clickGapMs ?? 400); }
@@ -382,10 +381,10 @@ const scrollGeminiChat = scrollChat;
 
 // Floating Toast Notification
 function showToast(text, durationMs = 2600) {
-  let toast = document.getElementById('undec-toast');
+  let toast = document.getElementById('glance-toast');
   if (!toast) {
     toast = document.createElement('div');
-    toast.id = 'undec-toast';
+    toast.id = 'glance-toast';
     toast.style.cssText = `
       position: fixed;
       top: 42px;
@@ -480,7 +479,7 @@ ipcRenderer.on('action:click-through-changed', (_event, isClickThrough) => {
 
 // 6. Opacity Changed (Ctrl + [ / Ctrl + ])
 ipcRenderer.on('action:opacity-changed', (_event, val) => {
-  const slider = document.getElementById('undec-opacity-slider');
+  const slider = document.getElementById('glance-opacity-slider');
   if (slider && Number.isFinite(val)) {
     slider.value = val;
   }
@@ -493,7 +492,7 @@ ipcRenderer.on('action:show-toast', (_event, payload) => {
   if (text && !isDashboard) showToast(text, duration);
 });
 
-// Once DOM is ready, inject our custom stealth floating top bar (strictly on supported AI overlays, never Dashboard or Google Accounts auth)
+// Once DOM is ready, inject our custom floating top bar (strictly on supported AI overlays, never Dashboard or Google Accounts auth)
 function safeInjectHeader() {
   if (typeof window === 'undefined' || !window.location) return;
   const href = window.location.href || '';
@@ -511,12 +510,12 @@ function safeInjectHeader() {
     return;
   }
 
-  if (document.getElementById('undecgpt-toolbar')) return;
+  if (document.getElementById('glance-toolbar')) return;
   if (!document.body) {
-    document.addEventListener('DOMContentLoaded', () => injectStealthHeader(), { once: true });
+    document.addEventListener('DOMContentLoaded', () => injectToolbarHeader(), { once: true });
     return;
   }
-  injectStealthHeader();
+  injectToolbarHeader();
 }
 
 if (document.readyState === 'loading') {
@@ -526,7 +525,7 @@ if (document.readyState === 'loading') {
 }
 
 function updateFocusButton(isFocusable) {
-  const btn = document.getElementById('undec-focus-btn');
+  const btn = document.getElementById('glance-focus-btn');
   if (!btn) return;
   const stateEl = btn.querySelector('.btn-state');
   if (stateEl) {
@@ -544,7 +543,7 @@ function updateFocusButton(isFocusable) {
 }
 
 function updateClickThroughButton(isClickThrough) {
-  const btn = document.getElementById('undec-clickthru-btn');
+  const btn = document.getElementById('glance-clickthru-btn');
   if (!btn) return;
   const stateEl = btn.querySelector('.btn-state');
   if (stateEl) {
@@ -561,17 +560,17 @@ function updateClickThroughButton(isClickThrough) {
   }
 }
 
-function injectStealthHeader() {
-  if (document.getElementById('undecgpt-toolbar')) return;
+function injectToolbarHeader() {
+  if (document.getElementById('glance-toolbar')) return;
 
   const style = document.createElement('style');
-  style.id = 'undecgpt-styles';
+  style.id = 'glance-styles';
   style.textContent = `
-    #undecgpt-toolbar,
-    #undecgpt-toolbar * {
+    #glance-toolbar,
+    #glance-toolbar * {
       box-sizing: border-box !important;
     }
-    #undecgpt-toolbar {
+    #glance-toolbar {
       position: fixed;
       top: 0;
       left: 0;
@@ -592,7 +591,7 @@ function injectStealthHeader() {
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
       gap: 6px;
     }
-    #undecgpt-toolbar .brand {
+    #glance-toolbar .brand {
       display: flex;
       align-items: center;
       gap: 5px;
@@ -601,12 +600,12 @@ function injectStealthHeader() {
       letter-spacing: 0.5px;
       flex-shrink: 0;
     }
-    #undecgpt-toolbar .brand svg {
+    #glance-toolbar .brand svg {
       width: 13px;
       height: 13px;
       fill: #60a5fa;
     }
-    #undecgpt-toolbar .controls {
+    #glance-toolbar .controls {
       display: flex;
       align-items: center;
       gap: 3px;
@@ -616,10 +615,10 @@ function injectStealthHeader() {
       overflow-x: auto;
       scrollbar-width: none;
     }
-    #undecgpt-toolbar .controls::-webkit-scrollbar {
+    #glance-toolbar .controls::-webkit-scrollbar {
       display: none;
     }
-    .undec-btn {
+    .glance-btn {
       background: rgba(255, 255, 255, 0.07);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: #cbd5e1;
@@ -639,16 +638,16 @@ function injectStealthHeader() {
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .undec-btn:hover {
+    .glance-btn:hover {
       background: rgba(255, 255, 255, 0.16);
       color: #fff;
     }
-    .undec-btn.active {
+    .glance-btn.active {
       background: #2563eb;
       border-color: #3b82f6;
       color: #fff;
     }
-    .undec-slider-wrap {
+    .glance-slider-wrap {
       display: flex;
       align-items: center;
       gap: 3px;
@@ -656,7 +655,7 @@ function injectStealthHeader() {
       font-size: 10px;
       flex-shrink: 0;
     }
-    .undec-slider {
+    .glance-slider {
       width: 40px;
       height: 4px;
       accent-color: #3b82f6;
@@ -666,26 +665,26 @@ function injectStealthHeader() {
       display: none;
     }
     @media (max-width: 540px) {
-      .undec-slider-wrap span {
+      .glance-slider-wrap span {
         display: none !important;
       }
-      .undec-slider {
+      .glance-slider {
         width: 32px !important;
       }
-      .undec-btn {
+      .glance-btn {
         padding: 2px 4px !important;
         font-size: 10px !important;
       }
-      #undecgpt-toolbar {
+      #glance-toolbar {
         padding: 0 5px !important;
         gap: 3px !important;
       }
-      #undecgpt-toolbar .controls {
+      #glance-toolbar .controls {
         gap: 2px !important;
       }
     }
     @media (max-width: 480px) {
-      #undecgpt-toolbar .brand span {
+      #glance-toolbar .brand span {
         display: none !important;
       }
       .btn-text-full {
@@ -696,14 +695,14 @@ function injectStealthHeader() {
       }
     }
     @media (max-width: 380px) {
-      .undec-slider-wrap {
+      .glance-slider-wrap {
         display: none !important;
       }
-      .undec-btn {
+      .glance-btn {
         padding: 2px 3px !important;
         font-size: 9.5px !important;
       }
-      #undecgpt-toolbar {
+      #glance-toolbar {
         padding: 0 4px !important;
         gap: 2px !important;
       }
@@ -719,7 +718,7 @@ function injectStealthHeader() {
   document.head.appendChild(style);
 
   const toolbar = document.createElement('div');
-  toolbar.id = 'undecgpt-toolbar';
+  toolbar.id = 'glance-toolbar';
   trustedControls(toolbar);
   toolbar.innerHTML = `
     <div class="brand">
@@ -727,42 +726,42 @@ function injectStealthHeader() {
       <span>Glance AI</span>
     </div>
     <div class="controls">
-      <button id="undec-clickthru-btn" class="undec-btn" title="Toggle Click-Through Mode (Ctrl+M)">
+      <button id="glance-clickthru-btn" class="glance-btn" title="Toggle Click-Through Mode (Ctrl+M)">
         <span class="btn-text-full">Click-Thru: </span><span class="btn-text-short">Thru: </span><span class="btn-state">OFF</span>
       </button>
-      <button id="undec-focus-btn" class="undec-btn active" title="Toggle Focus Mode (Ctrl+F)">
+      <button id="glance-focus-btn" class="glance-btn active" title="Toggle Focus Mode (Ctrl+F)">
         <span class="btn-text-full">Focus: </span><span class="btn-text-short">Foc: </span><span class="btn-state">ON</span>
       </button>
-      <button id="undec-snap-btn" class="undec-btn" title="Capture Workspace (Ctrl+S)">
+      <button id="glance-snap-btn" class="glance-btn" title="Capture Workspace (Ctrl+S)">
         <span class="btn-text-full">Capture</span><span class="btn-text-short">Snap</span>
       </button>
-      <button id="undec-send-btn" class="undec-btn" title="Send Message (Ctrl+Enter)">
+      <button id="glance-send-btn" class="glance-btn" title="Send Message (Ctrl+Enter)">
         Send
       </button>
-      <div class="undec-slider-wrap" title="Adjust Window Opacity (Ctrl+[ or Ctrl+])">
+      <div class="glance-slider-wrap" title="Adjust Window Opacity (Ctrl+[ or Ctrl+])">
         <span>Opacity</span>
-        <input type="range" id="undec-opacity-slider" class="undec-slider" min="0.15" max="1.0" step="0.05" value="0.95">
+        <input type="range" id="glance-opacity-slider" class="glance-slider" min="0.15" max="1.0" step="0.05" value="0.95">
       </div>
-      <button id="undec-settings-btn" class="undec-btn" title="Keyboard Shortcuts (Hotkeys)">
+      <button id="glance-settings-btn" class="glance-btn" title="Keyboard Shortcuts (Hotkeys)">
         <span class="btn-text-full">Hotkeys</span><span class="btn-text-short">Keys</span>
       </button>
-      <button id="undec-menu-btn" class="undec-btn" title="Dashboard Menu (Ctrl+B)">Menu</button>
-      <button id="undec-hide-btn" class="undec-btn" title="Hide Overlay (Ctrl+H)">Hide</button>
-      <button id="undec-close-btn" class="undec-btn" title="Close App (Ctrl+Shift+Q)">✕</button>
+      <button id="glance-menu-btn" class="glance-btn" title="Dashboard Menu (Ctrl+B)">Menu</button>
+      <button id="glance-hide-btn" class="glance-btn" title="Hide Overlay (Ctrl+H)">Hide</button>
+      <button id="glance-close-btn" class="glance-btn" title="Close App (Ctrl+Shift+Q)">✕</button>
     </div>
   `;
 
   document.body.prepend(toolbar);
 
   // Bind toolbar event listeners
-  const clickthruBtn = toolbar.querySelector('#undec-clickthru-btn');
-  const focusBtn = toolbar.querySelector('#undec-focus-btn');
-  const snapBtn = toolbar.querySelector('#undec-snap-btn');
-  const sendBtn = toolbar.querySelector('#undec-send-btn');
-  const opacitySlider = toolbar.querySelector('#undec-opacity-slider');
-  const settingsBtn = toolbar.querySelector('#undec-settings-btn');
-  const hideBtn = toolbar.querySelector('#undec-hide-btn');
-  const closeBtn = toolbar.querySelector('#undec-close-btn');
+  const clickthruBtn = toolbar.querySelector('#glance-clickthru-btn');
+  const focusBtn = toolbar.querySelector('#glance-focus-btn');
+  const snapBtn = toolbar.querySelector('#glance-snap-btn');
+  const sendBtn = toolbar.querySelector('#glance-send-btn');
+  const opacitySlider = toolbar.querySelector('#glance-opacity-slider');
+  const settingsBtn = toolbar.querySelector('#glance-settings-btn');
+  const hideBtn = toolbar.querySelector('#glance-hide-btn');
+  const closeBtn = toolbar.querySelector('#glance-close-btn');
 
   // Automatic hover detection: when mouse is over toolbar, allow clicks on toolbar!
   toolbar.addEventListener('mouseenter', () => {
@@ -772,14 +771,14 @@ function injectStealthHeader() {
 
   toolbar.addEventListener('mouseleave', async () => {
     isToolbarHovered = false;
-    if (document.getElementById('undec-modal-overlay')) {
+    if (document.getElementById('glance-modal-overlay')) {
       return;
     }
 
     const isCt = await ipcRenderer.invoke('get-click-through');
     isClickThroughActive = !!isCt;
 
-    if (!isToolbarHovered && isClickThroughActive && !document.getElementById('undec-modal-overlay')) {
+    if (!isToolbarHovered && isClickThroughActive && !document.getElementById('glance-modal-overlay')) {
       ipcRenderer.invoke('set-ignore-mouse-events', true, { forward: true });
     }
   });
@@ -863,7 +862,7 @@ function injectStealthHeader() {
     ipcRenderer.invoke('close-app');
   });
 
-  const menuBtn = toolbar.querySelector('#undec-menu-btn');
+  const menuBtn = toolbar.querySelector('#glance-menu-btn');
   if (menuBtn) {
     menuBtn.addEventListener('click', () => {
       ipcRenderer.invoke('open-dashboard');
@@ -878,7 +877,7 @@ function injectStealthHeader() {
 // Injected lightweight settings modal directly into page
 let closeHotkeysModal = null;
 function openSettingsModal() {
-  const existing = document.getElementById('undec-modal-overlay');
+  const existing = document.getElementById('glance-modal-overlay');
   if (existing) {
     closeHotkeysModal?.();
     return;
@@ -888,7 +887,7 @@ function openSettingsModal() {
 
   ipcRenderer.invoke('get-settings').then((settings) => {
     const modalWrap = document.createElement('div');
-    modalWrap.id = 'undec-modal-overlay';
+    modalWrap.id = 'glance-modal-overlay';
     trustedControls(modalWrap);
     modalWrap.style.cssText = `
       position: fixed;
@@ -1005,10 +1004,10 @@ function openSettingsModal() {
 function refreshSettings(settings) {
   if (isDashboard) return;
   isClickThroughActive = !!settings.clickThrough;
-  if (isToolbarHovered || document.getElementById('undec-modal-overlay')) ipcRenderer.invoke('set-ignore-mouse-events', false).catch(() => {});
+  if (isToolbarHovered || document.getElementById('glance-modal-overlay')) ipcRenderer.invoke('set-ignore-mouse-events', false).catch(() => {});
   updateFocusButton(settings.focusable); updateClickThroughButton(settings.clickThrough);
-  const slider = document.getElementById('undec-opacity-slider'); if (slider) slider.value = settings.opacity;
-  const labels = { 'undec-snap-btn': 'screenshot', 'undec-send-btn': 'send', 'undec-focus-btn': 'toggleFocus', 'undec-clickthru-btn': 'toggleClickThrough', 'undec-menu-btn': 'returnHome', 'undec-hide-btn': 'toggleVisibility', 'undec-close-btn': 'emergencyExit' };
+  const slider = document.getElementById('glance-opacity-slider'); if (slider) slider.value = settings.opacity;
+  const labels = { 'glance-snap-btn': 'screenshot', 'glance-send-btn': 'send', 'glance-focus-btn': 'toggleFocus', 'glance-clickthru-btn': 'toggleClickThrough', 'glance-menu-btn': 'returnHome', 'glance-hide-btn': 'toggleVisibility', 'glance-close-btn': 'emergencyExit' };
   for (const [id, action] of Object.entries(labels)) {
     const button = document.getElementById(id);
     if (button) button.title = formatShortcut(settings.shortcuts?.[action] || '');

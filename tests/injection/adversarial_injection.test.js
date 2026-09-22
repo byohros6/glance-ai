@@ -76,7 +76,7 @@ suite.test('Preload uploadViaTriggerSequence arms main-world interceptor and sup
         filesCount: fileInput.files.length,
         fileName: fileInput.files.length > 0 ? fileInput.files[0].name : null,
         nativeClickCalled,
-        interceptorState: window.__undec_interceptor_state
+        interceptorState: window.__glance_interceptor_state
       };
     })()
   `);

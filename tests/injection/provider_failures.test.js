@@ -48,9 +48,9 @@ suite.test('Real provider origin gets no page bridge and synthetic toolbar actio
   win = new BrowserWindow({ show: false, webPreferences: { preload: path.resolve('src/preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   await win.loadURL('https://chatgpt.com/');
   privilegedCalls = 0;
-  const result = await win.webContents.executeJavaScript(`(() => { for (const id of ['undec-snap-btn','undec-send-btn','undec-close-btn','undec-menu-btn']) document.getElementById(id)?.click(); return {bridge:typeof window.glanceai, legacy:typeof window.undecgpt, upload:typeof window.upload,toolbar:!!document.getElementById('undecgpt-toolbar')}; })()`);
+  const result = await win.webContents.executeJavaScript(`(() => { for (const id of ['glance-snap-btn','glance-send-btn','glance-close-btn','glance-menu-btn']) document.getElementById(id)?.click(); return {bridge:typeof window.glanceai, upload:typeof window.upload,toolbar:!!document.getElementById('glance-toolbar')}; })()`);
   await new Promise(resolve => setTimeout(resolve, 100));
-  assert.deepEqual(result, { bridge: 'undefined', legacy: 'undefined', upload: 'undefined', toolbar: true });
+  assert.deepEqual(result, { bridge: 'undefined', upload: 'undefined', toolbar: true });
   assert.equal(privilegedCalls, 0);
   session.defaultSession.protocol.unhandle('https');
 });

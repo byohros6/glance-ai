@@ -86,7 +86,7 @@ suite.test('PowerShell fallback produces full-resolution base64 PNG when desktop
     };
 
     const tempDir = app.getPath('temp');
-    const beforeFiles = (await fs.readdir(tempDir)).filter((f) => f.startsWith('undec_'));
+    const beforeFiles = (await fs.readdir(tempDir)).filter((f) => f.startsWith('glance_'));
 
     const result = await captureScreen();
 
@@ -103,7 +103,7 @@ suite.test('PowerShell fallback produces full-resolution base64 PNG when desktop
     assert.ok(header.width > 0 && header.height > 0, 'Fallback PNG must have non-zero dimensions');
 
     // Check temp file cleanup in app.getPath('temp')
-    const afterFiles = (await fs.readdir(tempDir)).filter((f) => f.startsWith('undec_'));
+    const afterFiles = (await fs.readdir(tempDir)).filter((f) => f.startsWith('glance_'));
     const orphanedFiles = afterFiles.filter((f) => !beforeFiles.includes(f));
     assert.strictEqual(
       orphanedFiles.length,

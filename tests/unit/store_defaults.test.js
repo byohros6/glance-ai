@@ -7,9 +7,9 @@ import { createTestSuite, assert } from '../helpers/test_suite.js';
 
 const suite = createTestSuite('Tier 1: Store & Settings Defaults');
 
-const tempSettingsFile = path.join(os.tmpdir(), `undecgpt_store_defaults_test_${Date.now()}.json`);
+const tempSettingsFile = path.join(os.tmpdir(), `glance_store_defaults_test_${Date.now()}.json`);
 
-suite.test('DEFAULT_SETTINGS defines correct default geometry and stealth settings', () => {
+suite.test('DEFAULT_SETTINGS defines correct default geometry and window settings', () => {
   assert.strictEqual(DEFAULT_SETTINGS.windowWidth, 520, 'windowWidth default should be 520');
   assert.strictEqual(DEFAULT_SETTINGS.windowHeight, 650, 'windowHeight default should be 650');
   assert.strictEqual(DEFAULT_SETTINGS.x, null, 'x default should be null');
@@ -21,7 +21,7 @@ suite.test('DEFAULT_SETTINGS defines correct default geometry and stealth settin
   assert.strictEqual(DEFAULT_SETTINGS.opacity, 0.95, 'opacity should default to 0.95');
 });
 
-suite.test('Fresh SettingsStore instance loads all default window geometry and stealth settings', () => {
+suite.test('Fresh SettingsStore instance loads all default window geometry and window settings', () => {
   if (fs.existsSync(tempSettingsFile)) fs.unlinkSync(tempSettingsFile);
   const testStore = new SettingsStore(tempSettingsFile);
 

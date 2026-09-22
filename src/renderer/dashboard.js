@@ -39,7 +39,7 @@ async function flushSettings() {
   clearTimeout(saveTimer);
   const patch = pendingSettings; pendingSettings = {};
   if (!Object.keys(patch).length) return saveChain;
-  const api = window.glanceai || window.undecgpt;
+  const api = window.glanceai;
   saveChain = saveChain.catch(() => {}).then(() => api.saveSettings(patch));
   try {
     currentSettings = await saveChain;
@@ -126,7 +126,7 @@ function updateLivePreview(width, height) {
 }
 
 async function init() {
-  const api = window.glanceai || window.undecgpt;
+  const api = window.glanceai;
   if (!api) {
     console.error('Glance AI API not available');
     return;
@@ -430,7 +430,7 @@ function cancelActiveRecording() {
   badge.textContent = originalText;
   badge.classList.remove('listening');
   activeRecordingState = null;
-  const api = window.glanceai || window.undecgpt;
+  const api = window.glanceai;
   if (api && api.resumeShortcuts) {
     api.resumeShortcuts();
   }
@@ -474,7 +474,7 @@ function renderShortcuts() {
 }
 
 async function startRecording(actionId, btn, badge) {
-  const api = window.glanceai || window.undecgpt;
+  const api = window.glanceai;
 
   // If clicking the same button currently in recording mode, toggle off / cancel
   if (activeRecordingState && activeRecordingState.actionId === actionId) {

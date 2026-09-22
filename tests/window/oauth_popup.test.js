@@ -66,7 +66,7 @@ suite.test('External third-party links are denied from overlay window', () => {
   const untrustedRes = oauthHandler({ url: 'https://evil-site.com/exploit' });
   assert.strictEqual(untrustedRes.action, 'deny', 'Untrusted external URL must be denied');
 
-  const arbitraryRes = oauthHandler({ url: 'https://github.com/UndecGPT' });
+  const arbitraryRes = oauthHandler({ url: 'https://github.com/glance-ai' });
   assert.strictEqual(arbitraryRes.action, 'deny', 'Arbitrary external URL must be denied');
 });
 

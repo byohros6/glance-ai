@@ -66,14 +66,14 @@ suite.test('Toolbar hover allows controls clicking during Click-Through mode', a
   // Step 1: Simulate hovering over toolbar (mouseenter)
   const hovered = await win.webContents.executeJavaScript(`
     (() => {
-      const toolbar = document.getElementById('undecgpt-toolbar');
+      const toolbar = document.getElementById('glance-toolbar');
       if (!toolbar) return false;
       toolbar.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
       return true;
     })()
   `);
 
-  assert.strictEqual(hovered, true, 'Toolbar element #undecgpt-toolbar must exist');
+  assert.strictEqual(hovered, true, 'Toolbar element #glance-toolbar must exist');
   await new Promise((r) => setTimeout(r, 100));
 
   assert.ok(mouseEventsCalls.length > 0, 'Should have received set-ignore-mouse-events call');
@@ -86,7 +86,7 @@ suite.test('Toolbar hover allows controls clicking during Click-Through mode', a
   // Step 2: Simulate leaving toolbar (mouseleave)
   await win.webContents.executeJavaScript(`
     (() => {
-      const toolbar = document.getElementById('undecgpt-toolbar');
+      const toolbar = document.getElementById('glance-toolbar');
       toolbar.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     })()
   `);
@@ -114,7 +114,7 @@ suite.test('Toolbar leave does NOT enable click-through if mode is OFF', async (
 
   await win.webContents.executeJavaScript(`
     (() => {
-      const toolbar = document.getElementById('undecgpt-toolbar');
+      const toolbar = document.getElementById('glance-toolbar');
       toolbar.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     })()
   `);
@@ -138,14 +138,14 @@ suite.test('Hotkeys modal opens, accepts Escape key, and restores click-through 
   // Open modal via settings button
   await win.webContents.executeJavaScript(`
     (() => {
-      const btn = document.getElementById('undec-settings-btn');
+      const btn = document.getElementById('glance-settings-btn');
       if (btn) btn.click();
     })()
   `);
   await new Promise((r) => setTimeout(r, 150));
 
   const opened = await win.webContents.executeJavaScript(`
-    !!document.getElementById('undec-modal-overlay')
+    !!document.getElementById('glance-modal-overlay')
   `);
   assert.strictEqual(opened, true, 'Hotkeys modal must open when settings button clicked');
 
@@ -158,7 +158,7 @@ suite.test('Hotkeys modal opens, accepts Escape key, and restores click-through 
   await new Promise((r) => setTimeout(r, 100));
 
   const closed = await win.webContents.executeJavaScript(`
-    !document.getElementById('undec-modal-overlay')
+    !document.getElementById('glance-modal-overlay')
   `);
   assert.strictEqual(closed, true, 'Hotkeys modal must close on Escape key');
 

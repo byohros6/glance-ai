@@ -186,13 +186,13 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   // Subtest A: Toolbar Hover interaction
   const hoverToolbar = await overlayWin.webContents.executeJavaScript(`
     (() => {
-      const tb = document.getElementById('undecgpt-toolbar');
+      const tb = document.getElementById('glance-toolbar');
       if (!tb) return false;
       tb.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
       return true;
     })()
   `);
-  assert.strictEqual(hoverToolbar, true, 'Toolbar #undecgpt-toolbar must exist in DOM');
+  assert.strictEqual(hoverToolbar, true, 'Toolbar #glance-toolbar must exist in DOM');
   await new Promise((r) => setTimeout(r, 100));
 
   assert.ok(mouseEventsCalls.length > 0, 'Must invoke set-ignore-mouse-events on toolbar hover');
@@ -202,7 +202,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   // Subtest B: Toolbar Mouseleave interaction restores click-through with forward: true
   await overlayWin.webContents.executeJavaScript(`
     (() => {
-      const tb = document.getElementById('undecgpt-toolbar');
+      const tb = document.getElementById('glance-toolbar');
       tb.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     })()
   `);
@@ -216,7 +216,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   // Open modal via settings button
   await overlayWin.webContents.executeJavaScript(`
     (() => {
-      const settingsBtn = document.getElementById('undec-settings-btn');
+      const settingsBtn = document.getElementById('glance-settings-btn');
       settingsBtn.click();
     })()
   `);
@@ -225,7 +225,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   // Verify modal is open and mouse events are un-ignored
   const modalState = await overlayWin.webContents.executeJavaScript(`
     (() => {
-      const modal = document.getElementById('undec-modal-overlay');
+      const modal = document.getElementById('glance-modal-overlay');
       return {
         exists: !!modal,
         hasDashboardControl: !!modal?.querySelector('#modal-dashboard-btn')
@@ -242,7 +242,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   mouseEventsCalls.length = 0;
   await overlayWin.webContents.executeJavaScript(`
     (() => {
-      const tb = document.getElementById('undecgpt-toolbar');
+      const tb = document.getElementById('glance-toolbar');
       tb.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     })()
   `);
@@ -261,7 +261,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   await new Promise((r) => setTimeout(r, 100));
 
   const modalClosed = await overlayWin.webContents.executeJavaScript(`
-    !document.getElementById('undec-modal-overlay')
+    !document.getElementById('glance-modal-overlay')
   `);
   assert.strictEqual(modalClosed, true, 'Modal should be closed');
 
@@ -273,7 +273,7 @@ suite.test('Click-Through Mode: mouse events forwarded on body, captured on tool
   for (let i = 0; i < 50; i++) {
     await overlayWin.webContents.executeJavaScript(`
       (() => {
-        const tb = document.getElementById('undecgpt-toolbar');
+        const tb = document.getElementById('glance-toolbar');
         tb.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
         tb.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
       })()

@@ -57,7 +57,7 @@ suite.test('Window starts with focusable mode and can switch to non-activating',
 
   const buttonState = await win.webContents.executeJavaScript(`
     (() => {
-      const btn = document.getElementById('undec-focus-btn');
+      const btn = document.getElementById('glance-focus-btn');
       return {
         text: btn ? btn.textContent.trim() : null,
         hasActive: btn ? btn.classList.contains('active') : false
@@ -79,7 +79,7 @@ suite.test('Restoring focus mode enables focus and updates UI to active', async 
 
   const buttonState = await win.webContents.executeJavaScript(`
     (() => {
-      const btn = document.getElementById('undec-focus-btn');
+      const btn = document.getElementById('glance-focus-btn');
       return {
         text: btn ? btn.textContent.trim() : null,
         hasActive: btn ? btn.classList.contains('active') : false
