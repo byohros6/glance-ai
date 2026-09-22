@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 const configured = new WeakMap();
+let queue = Promise.resolve();
 
 // Scope the DWM transition policy to our HWND. Keeping WS_THICKFRAME retains
 // native edge resizing; changing system animation preferences would affect other apps.
@@ -29,12 +30,14 @@ if ($owner -ne ${process.pid}) { throw 'Window no longer belongs to this process
 $result = [GlanceWindowEffects]::DwmSetWindowAttribute($handle, 3, [ref]$disabled, 4)
 if ($result -ne 0) { throw "DwmSetWindowAttribute failed: $result" }
 `;
-  const pending = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-    windowsHide: true, timeout: 5000, maxBuffer: 64 * 1024
-  }).then(() => true).catch(error => {
-    if (!win.isDestroyed()) console.warn('[Window effects] Could not disable transitions:', error.stderr?.trim() || error.message);
-    return false;
-  });
+  const pending = queue = queue.then(() =>
+    run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      windowsHide: true, timeout: 15000, maxBuffer: 64 * 1024
+    }).then(() => true).catch(error => {
+      if (!win.isDestroyed()) console.warn('[Window effects] Could not disable transitions:', error.stderr?.trim() || error.message);
+      return false;
+    })
+  );
   configured.set(win, pending);
   return pending;
 }
