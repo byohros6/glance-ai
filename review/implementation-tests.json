@@ -74,7 +74,7 @@
     "code": 0,
     "signal": null,
     "timedOut": false,
-    "stdout": "\r\n\n=== Running Suite: Tier 1: Store & Settings Defaults ===\n  ✔ PASS: DEFAULT_SETTINGS defines correct default geometry and stealth settings\n  ✔ PASS: Fresh SettingsStore instance loads all default window geometry and stealth settings\n  ✔ PASS: Store contains complete prompt instructions\n  ✔ PASS: Store contains all 14 WhisprGPT shortcut key bindings\n  ✔ PASS: Store set and get persist key-value pairs\n  ✔ PASS: Store update performs deep merge on shortcuts\n--- Result: 6 passed, 0 failed (0.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":6,\"failed\":0}\n",
+    "stdout": "\r\n\n=== Running Suite: Tier 1: Store & Settings Defaults ===\n  ✔ PASS: DEFAULT_SETTINGS defines correct default geometry and stealth settings\n  ✔ PASS: Fresh SettingsStore instance loads all default window geometry and stealth settings\n  ✔ PASS: Store contains complete prompt instructions\n  ✔ PASS: Store contains all 14 default shortcut key bindings\n  ✔ PASS: Store set and get persist key-value pairs\n  ✔ PASS: Store update performs deep merge on shortcuts\n--- Result: 6 passed, 0 failed (0.00s) ---\n\nGLANCE_TEST_RESULT {\"passed\":6,\"failed\":0}\n",
     "stderr": "",
     "seconds": "0.14",
     "passed": true

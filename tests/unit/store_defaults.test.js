@@ -46,7 +46,7 @@ suite.test('Store contains complete prompt instructions', () => {
   assert.ok(prompt.toLowerCase().includes('question') || prompt.toLowerCase().includes('image'), 'prompt should mention image analysis');
 });
 
-suite.test('Store contains all 14 WhisprGPT shortcut key bindings', () => {
+suite.test('Store contains all 14 default shortcut key bindings', () => {
   const testStore = new SettingsStore(tempSettingsFile);
   const shortcuts = testStore.get('shortcuts');
   assert.ok(shortcuts, 'shortcuts object must exist');

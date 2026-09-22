@@ -6,6 +6,7 @@ import { registerGlobalShortcuts, validateShortcuts } from './shortcuts.js';
 import { captureScreenWithHide } from './screenshot.js';
 import { OperationCoordinator } from './operations.js';
 import { createPermissionPolicy } from './permissions.js';
+import { disableWindowTransitions } from './window-effects.js';
 import { PROVIDER_URLS, isAllowedWebURL, isExternalURL, isTrustedSender, requireBoolean } from './security.js';
 import { applyWindowState, restoreWindow, hideWindow, visibleBounds } from './window-state.js';
 export { PROVIDER_URLS };
@@ -121,6 +122,7 @@ function secureWebContents(contents, local = false) {
 function createDashboard() {
   const win = new BrowserWindow({ width: 840, height: 720, minWidth: 600, minHeight: 450, show: false, frame: false, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true } });
   dashboardWindow = win;
+  void disableWindowTransitions(win);
   secureWebContents(win.webContents, true);
   win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
   win.on('closed', () => { dashboardWindow = null; });
@@ -133,6 +135,7 @@ function createOverlay() {
   const settings = store.getAll();
   const win = new BrowserWindow({ ...visibleBounds({ x: settings.x, y: settings.y, width: settings.windowWidth, height: settings.windowHeight }), show: false, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, focusable: settings.focusable, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: true } });
   overlayWindow = win;
+  void disableWindowTransitions(win);
   secureWebContents(win.webContents);
   win.webContents.setUserAgent(userAgent);
   for (const event of ['resize', 'move']) win.on(event, () => { if (!win.isDestroyed()) store.setBounds(win.getBounds()); });

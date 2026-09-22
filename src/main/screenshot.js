@@ -58,7 +58,7 @@ export async function captureScreen() {
     console.warn('[Screenshot] desktopCapturer failed, trying PowerShell fallback:', err.message);
   } finally { clearTimeout(sourceTimer); }
 
-  // Method 2: Windows PowerShell CopyFromScreen with DPI Awareness (exact WhisprGPT implementation)
+  // Method 2: Windows PowerShell CopyFromScreen with DPI Awareness
   let tempFile = null;
   try {
     tempFile = path.join(

@@ -61,6 +61,24 @@ suite.test('Move shortcuts apply during the native callback, without waiting for
   shortcuts.get('CommandOrControl+Right')();
   assert.equal(win.getBounds().x, area.x + 100);
 });
+suite.test('Ctrl+H restores directly with native transitions disabled and resizing retained', async () => {
+  if (process.platform !== 'win32') return;
+  const { disableWindowTransitions } = await import(pathToFileURL(path.resolve(process.env.GLANCE_TEST_APP_ROOT || '.', 'src/main/window-effects.js')).href);
+  const win = windows().overlayWindow;
+  assert.equal(await disableWindowTransitions(win), true, 'Windows must accept the transition-disable policy');
+  assert.equal(await disableWindowTransitions(windows().dashboardWindow), true);
+  const bounds = win.getBounds();
+  const opacity = win.getOpacity();
+  for (let i = 0; i < 5; i++) {
+    shortcuts.get('CommandOrControl+H')();
+    assert.equal(win.isVisible(), false);
+    shortcuts.get('CommandOrControl+H')();
+    assert.equal(win.isVisible(), true);
+    assert.equal(win.getOpacity(), opacity);
+    assert.deepEqual(win.getBounds(), bounds);
+    assert.equal(win.isResizable(), true);
+  }
+});
 suite.test('Ctrl+B flushes dashboard edits before launching', async () => {
   main.showDashboard();
   await dashboard("queueSettings({prompt:'Saved before launch'});");

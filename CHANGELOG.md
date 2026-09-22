@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3
+
+- Disable Windows show/hide transitions for Glance windows so Ctrl+H restores without the native fade/zoom effect.
+- Set the per-window DWM policy once in a hidden, asynchronous startup helper. Ctrl+H remains synchronous and launches no helper process.
+- Preserve native edge resizing, opacity, focus/click-through, window bounds, and the provider's original UI; other applications' animation settings are untouched.
+- Add production coverage for Windows accepting the transition policy and repeated immediate hide/show with unchanged size and opacity.
+
 ## 1.2.2
 
 - Run global shortcut actions immediately in their native callback, instead of deferring them to a promise microtask. Async capture/send rejection handling remains intact.

@@ -326,7 +326,7 @@ async function submitPrompt() {
 
 const submitGemini = submitPrompt;
 
-// Expose upload API matching WhisprGPT & Glance AI multi-provider
+// Expose upload API for Glance AI multi-provider
 if (testMode) contextBridge.exposeInMainWorld('upload', {
   uploadImage: (args) => uploadScreenshot(args),
   waitForElement: (selector, timeoutMs) => waitForElement(selector, timeoutMs),
