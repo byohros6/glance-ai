@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.4
+
+- Fix Google Accounts "This browser or app may not be secure" block by standardizing stable Chrome 132 User-Agent and client hints across all network requests, background frames, and popup windows.
+- Prevent Windows Security "Choose a passkey" system modal by safely intercepting WebAuthn conditional mediation (passkey autofill) in preload, presenting standard email & password entry.
+- Add `accounts.youtube.com` to recognized auth hosts for cross-origin session synchronization.
+- Eliminate window teardown exit race in `shortcuts_registration.test.js` using synchronous `win.destroy()`.
+
 ## 1.2.3
 
 - Disable Windows show/hide transitions for Glance windows so Ctrl+H restores without the native fade/zoom effect.

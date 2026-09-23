@@ -47,7 +47,7 @@ suite.test('Unregisters all shortcuts cleanly', () => {
 app.whenReady().then(async () => {
   const success = await suite.run();
   if (win && !win.isDestroyed()) {
-    win.close();
+    win.destroy();
   }
   globalShortcut.unregisterAll();
   app.exit(success ? 0 : 1);

@@ -1,5 +1,24 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
+// Intercept background WebAuthn conditional mediation (passkey autofill) to prevent Windows Security modal
+try {
+  webFrame.executeJavaScript(`
+    (() => {
+      if (typeof window !== 'undefined' && navigator.credentials && typeof navigator.credentials.get === 'function') {
+        const origGet = navigator.credentials.get.bind(navigator.credentials);
+        const patchedGet = function(options) {
+          if (options && options.mediation === 'conditional') {
+            return Promise.reject(new DOMException('Conditional mediation aborted', 'AbortError'));
+          }
+          return origGet(options);
+        };
+        patchedGet.toString = () => 'function get() { [native code] }';
+        navigator.credentials.get = patchedGet;
+      }
+    })();
+  `);
+} catch {}
+
 const testMode = process.argv.includes('--glance-test-api') && location.protocol === 'file:' && /_mock\.html$/.test(location.pathname);
 const isDashboard = location.protocol === 'file:' && location.pathname.replaceAll('\\', '/').endsWith('/renderer/dashboard.html');
 function trustedControls(root) {

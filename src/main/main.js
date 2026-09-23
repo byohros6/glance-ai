@@ -15,9 +15,8 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 const dashboardPath = path.join(directory, '../renderer/dashboard.html');
 const dashboardURL = pathToFileURL(dashboardPath).href;
 const preload = path.join(directory, '../preload/preload.cjs');
-// Retain browser compatibility without advertising an obsolete Chromium version.
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
-const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`;
+const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
 app.userAgentFallback = userAgent;
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
@@ -117,7 +116,10 @@ function secureWebContents(contents, local = false) {
     openExternal(url);
     return { action: 'deny' };
   });
-  contents.on('did-create-window', child => secureWebContents(child.webContents));
+  contents.on('did-create-window', child => {
+    child.webContents.setUserAgent(userAgent);
+    secureWebContents(child.webContents);
+  });
 }
 function createDashboard() {
   const win = new BrowserWindow({ width: 840, height: 720, minWidth: 600, minHeight: 450, show: false, frame: false, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true } });
@@ -249,8 +251,13 @@ handle('preview-overlay-size', ['dashboard'], ({ width, height } = {}) => {
 });
 
 app.whenReady().then(() => {
-  // app.userAgentFallback and webContents.setUserAgent already cover requests.
-  // Do not send every provider asset/request through a main-process callback.
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['User-Agent'] = userAgent;
+    if (details.requestHeaders['sec-ch-ua']) {
+      details.requestHeaders['sec-ch-ua'] = '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"';
+    }
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
   const permissions = createPermissionPolicy();
   session.defaultSession.setPermissionRequestHandler(async (contents, permission, callback, details) => {
     const origin = details.requestingUrl || contents.getURL();
