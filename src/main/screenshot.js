@@ -90,7 +90,7 @@ $graphics.Dispose()
 $bmp.Dispose()
 `;
 
-    await execFileAsync('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript], { windowsHide: true, timeout: 10000, maxBuffer: 1024 * 1024 });
+    await execFileAsync('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript], { windowsHide: true, timeout: 25000, maxBuffer: 1024 * 1024 });
     const buffer = await fs.readFile(tempFile);
     return `data:image/png;base64,${buffer.toString('base64')}`;
   } catch (err) {

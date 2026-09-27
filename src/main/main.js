@@ -16,8 +16,23 @@ const dashboardPath = path.join(directory, '../renderer/dashboard.html');
 const dashboardURL = pathToFileURL(dashboardPath).href;
 const preload = path.join(directory, '../preload/preload.cjs');
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
-const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
-app.userAgentFallback = userAgent;
+export const GOOGLE_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15';
+export const STANDARD_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+const userAgent = STANDARD_USER_AGENT;
+app.userAgentFallback = STANDARD_USER_AGENT;
+
+export function isGoogleDomain(url = '') {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.endsWith('google.com') || hostname.endsWith('youtube.com') || hostname.endsWith('gstatic.com') || hostname.endsWith('googleapis.com');
+  } catch {
+    return false;
+  }
+}
+
+export function getUserAgentForURL(url = '') {
+  return isGoogleDomain(url) ? GOOGLE_USER_AGENT : STANDARD_USER_AGENT;
+}
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 let overlayWindow = null;
@@ -117,7 +132,7 @@ function secureWebContents(contents, local = false) {
     return { action: 'deny' };
   });
   contents.on('did-create-window', child => {
-    child.webContents.setUserAgent(userAgent);
+    child.webContents.setUserAgent(GOOGLE_USER_AGENT);
     secureWebContents(child.webContents);
   });
 }
@@ -139,11 +154,15 @@ function createOverlay() {
   overlayWindow = win;
   void disableWindowTransitions(win);
   secureWebContents(win.webContents);
-  win.webContents.setUserAgent(userAgent);
+  const initialUA = getUserAgentForURL(PROVIDER_URLS[settings.provider] || '');
+  win.webContents.setUserAgent(initialUA);
   for (const event of ['resize', 'move']) win.on(event, () => { if (!win.isDestroyed()) store.setBounds(win.getBounds()); });
   win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
   win.on('closed', () => { operations.cancel(win); overlayWindow = null; loadedProvider = null; });
-  win.webContents.on('did-start-navigation', (_event, _url, inPlace, mainFrame) => {
+  win.webContents.on('did-start-navigation', (_event, url, inPlace, mainFrame) => {
+    if (mainFrame) {
+      win.webContents.setUserAgent(getUserAgentForURL(url));
+    }
     if (mainFrame && !inPlace) operations.cancel(win);
   });
   win.webContents.on('render-process-gone', () => {
@@ -178,7 +197,9 @@ export function launchGeminiOverlay() {
   if (loadedProvider !== settings.provider) {
     operations.cancel(win);
     loadedProvider = settings.provider;
-    win.loadURL(PROVIDER_URLS[settings.provider], { userAgent }).catch(error => {
+    const targetUA = getUserAgentForURL(PROVIDER_URLS[settings.provider] || '');
+    win.webContents.setUserAgent(targetUA);
+    win.loadURL(PROVIDER_URLS[settings.provider], { userAgent: targetUA }).catch(error => {
       if (!win.isDestroyed() && error.code !== 'ERR_ABORTED') { loadedProvider = null; showDashboard(); notify('Unable to load the AI page. Check your connection and try again.'); }
     });
   } else win.webContents.send('action:settings-changed', settings);
@@ -252,9 +273,16 @@ handle('preview-overlay-size', ['dashboard'], ({ width, height } = {}) => {
 
 app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['User-Agent'] = userAgent;
-    if (details.requestHeaders['sec-ch-ua']) {
-      details.requestHeaders['sec-ch-ua'] = '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"';
+    if (isGoogleDomain(details.url)) {
+      details.requestHeaders['User-Agent'] = GOOGLE_USER_AGENT;
+      delete details.requestHeaders['sec-ch-ua'];
+      delete details.requestHeaders['sec-ch-ua-mobile'];
+      delete details.requestHeaders['sec-ch-ua-platform'];
+    } else {
+      details.requestHeaders['User-Agent'] = STANDARD_USER_AGENT;
+      if (details.requestHeaders['sec-ch-ua']) {
+        details.requestHeaders['sec-ch-ua'] = '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"';
+      }
     }
     callback({ cancel: false, requestHeaders: details.requestHeaders });
   });

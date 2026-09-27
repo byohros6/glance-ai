@@ -94,12 +94,14 @@ suite.test('OAuth popup interaction preserves overlay setContentProtection statu
   }
 });
 
-suite.test('All Google auth and Gemini requests route with consistent Chrome UA', async () => {
-  const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+suite.test('All Google auth and Gemini requests route with consistent Google UA', async () => {
+  const GOOGLE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15';
 
   const mockHeaderFilter = (details) => {
     const headers = { ...details.requestHeaders };
-    headers['User-Agent'] = CHROME_UA;
+    if (details.url.includes('google.com')) {
+      headers['User-Agent'] = GOOGLE_UA;
+    }
     return headers;
   };
 
@@ -108,14 +110,14 @@ suite.test('All Google auth and Gemini requests route with consistent Chrome UA'
     url: 'https://accounts.google.com/ServiceLogin',
     requestHeaders: { 'User-Agent': 'Old' }
   });
-  assert.strictEqual(authHeaders['User-Agent'], CHROME_UA, 'Google accounts must use Chrome UA');
+  assert.strictEqual(authHeaders['User-Agent'], GOOGLE_UA, 'Google accounts must use Google UA');
 
   // 2. Check Gemini routing
   const geminiHeaders = mockHeaderFilter({
     url: 'https://gemini.google.com/app',
     requestHeaders: { 'User-Agent': 'Old' }
   });
-  assert.strictEqual(geminiHeaders['User-Agent'], CHROME_UA, 'Gemini app must use Chrome UA');
+  assert.strictEqual(geminiHeaders['User-Agent'], GOOGLE_UA, 'Gemini app must use Google UA');
 });
 
 app.whenReady().then(async () => {

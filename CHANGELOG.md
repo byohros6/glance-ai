@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.5
+
+- Resolve Google Sign-In "This browser or app may not be secure" block during email submission by routing Google authentication and Gemini sessions with clean WebKit User-Agent and stripping Client Hints to bypass Chromium BotGuard heuristics.
+- Eliminate detected script tampering by removing main-world WebAuthn monkey-patching in preload scripts, allowing native browser authentication APIs to remain intact.
+- Expand recognized authentication hosts to cover Google verification and 2FA subdomains (`myaccount.google.com`, `passkeys.google.com`, `oauth2.googleapis.com`, `apis.google.com`, `ssl.gstatic.com`, `www.google.com`, `ogs.google.com`).
+- Retain standard Chrome 132 fingerprinting for third-party AI providers (ChatGPT, Claude, Perplexity).
+
 ## 1.2.4
 
 - Fix Google Accounts "This browser or app may not be secure" block by standardizing stable Chrome 132 User-Agent and client hints across all network requests, background frames, and popup windows.

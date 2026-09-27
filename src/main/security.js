@@ -6,7 +6,12 @@ export const PROVIDER_URLS = Object.freeze({
 });
 
 const providerHosts = new Set(['gemini.google.com', 'chatgpt.com', 'chat.openai.com', 'claude.ai', 'www.perplexity.ai', 'perplexity.ai']);
-const authHosts = new Set(['accounts.google.com', 'accounts.youtube.com', 'auth.openai.com', 'auth0.openai.com', 'auth.anthropic.com', 'accounts.anthropic.com', 'appleid.apple.com', 'login.microsoftonline.com', 'login.live.com']);
+const authHosts = new Set([
+  'accounts.google.com', 'myaccount.google.com', 'passkeys.google.com', 'oauth2.googleapis.com',
+  'apis.google.com', 'ssl.gstatic.com', 'www.google.com', 'ogs.google.com', 'accounts.youtube.com',
+  'auth.openai.com', 'auth0.openai.com', 'auth.anthropic.com', 'accounts.anthropic.com',
+  'appleid.apple.com', 'login.microsoftonline.com', 'login.live.com'
+]);
 
 export function isAllowedWebURL(value, includeAuth = false) {
   try {

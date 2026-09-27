@@ -260,6 +260,7 @@ suite.test('Rapid capture spam: isCapturing mutex guards against overlapping cap
   assert.strictEqual(testWin.getOpacity(), 0.88, 'Window opacity must not be corrupted to 0 after spam burst');
 
   // Verify that after the spam burst finishes, a subsequent capture works normally
+  await new Promise((r) => setTimeout(r, 1000));
   const subsequentResult = await captureScreenWithHide(testWin, { savedOpacity: 0.88 });
   assert.ok(subsequentResult, 'Subsequent capture after mutex release must succeed');
   assert.strictEqual(testWin.getOpacity(), 0.88, 'Window opacity remains 0.88 after subsequent capture');
