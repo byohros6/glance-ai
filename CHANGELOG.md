@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.6
+
+- Fix duplicate attachment rejection in Gemini ("You already uploaded a file named screenshot.png") by generating distinct, timestamped sequential screenshot filenames (`screenshot_HHMMSS_seq.png`) across capture operations.
+- Eliminate "An attachment or send is already in progress" lockup caused by verification hanging when a provider rejected a duplicate upload.
+- Implement early error banner detection (`activeErrorTexts` / `getNewProviderError`) in `verifyAttachment` to immediately abort and report provider-level upload failures instead of timing out.
+- Fix occasional Windows access violation exit code (`3221225477`) during test suite teardown in `unit/opacity_clamping.test.js` using synchronous `win.destroy()`.
+
 ## 1.2.5
 
 - Resolve Google Sign-In "This browser or app may not be secure" block during email submission by routing Google authentication and Gemini sessions with clean WebKit User-Agent and stripping Client Hints to bypass Chromium BotGuard heuristics.

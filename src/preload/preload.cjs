@@ -77,6 +77,15 @@ function waitForElement(selector, timeoutMs = 4000) {
   });
 }
 
+let screenshotSeq = 0;
+function generateScreenshotFilename() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  screenshotSeq = (screenshotSeq + 1) % 10000;
+  return `screenshot_${time}_${screenshotSeq}.png`;
+}
+
 // Convert base64 Data URL to standard File object
 function dataUrlToFile(dataUrl, filename = 'screenshot.png') {
   const parts = dataUrl.split(',');
@@ -96,6 +105,7 @@ function dataUrlToFile(dataUrl, filename = 'screenshot.png') {
 // Injects File into HTMLInputElement and dispatches input & change events
 function injectFileFromDataUrl(input, dataUrl, filename = 'screenshot.png') {
   if (!input) return false;
+  try { input.value = ''; } catch {}
   const file = dataUrlToFile(dataUrl, filename);
   const dt = new DataTransfer();
   dt.items.add(file);
@@ -156,30 +166,62 @@ async function waitForOutcome(predicate, timeout = testMode ? 1200 : 12000) {
   } while (Date.now() < deadline);
   return false;
 }
-async function verifyAttachment(provider, before) {
+function activeErrorTexts(provider) {
+  const selectors = [
+    '[role="alert"]',
+    '[role="status"]',
+    'mat-snack-bar-container',
+    'snack-bar-container',
+    '.toast',
+    '[data-testid*="error"]',
+    '[data-test-id*="error"]'
+  ];
+  const candidates = [...document.querySelectorAll(selectors.join(', '))].filter(visible);
+  const set = new Set();
+  for (const el of candidates) {
+    const text = (el.innerText || el.textContent || '').trim();
+    if (text) set.add(text);
+  }
+  return set;
+}
+
+function getNewProviderError(provider, existingErrors = new Set()) {
+  const currentErrors = activeErrorTexts(provider);
+  for (const text of currentErrors) {
+    if (!existingErrors.has(text) && /already uploaded|unsupported|failed to upload|could not upload|too large|file type not supported|file named/i.test(text)) {
+      return text;
+    }
+  }
+  return null;
+}
+
+async function verifyAttachment(provider, before, existingErrors = new Set()) {
   let readySince = 0;
   return waitForOutcome(() => {
+    const errorMsg = getNewProviderError(provider, existingErrors);
+    if (errorMsg) throw new Error(errorMsg);
     const changed = attachmentNodes(provider).some(node => !before.has(node) || before.get(node) !== node.outerHTML);
     if (!changed || uploadPending(provider)) { readySince = 0; return false; }
     readySince ||= Date.now();
     return Date.now() - readySince >= 200;
   });
 }
-function pasteImageBlob(target, dataUrl) {
+function pasteImageBlob(target, dataUrl, filename = 'screenshot.png') {
   if (!target) return false;
-  const transfer = new DataTransfer(); transfer.items.add(dataUrlToFile(dataUrl));
+  const transfer = new DataTransfer(); transfer.items.add(dataUrlToFile(dataUrl, filename));
   target.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }));
   return true; // Attempted, not acknowledged. The caller must verify the preview.
 }
-async function fallbackSyntheticPaste(dataUrl) {
+async function fallbackSyntheticPaste(dataUrl, filename) {
   const provider = detectActiveProvider();
   const before = attachmentSnapshot(provider);
+  const errorsBefore = activeErrorTexts(provider);
   const focused = document.activeElement;
   const target = focused?.matches('textarea, [contenteditable="true"]') ? focused : editorFor(provider);
-  return pasteImageBlob(target, dataUrl) ? verifyAttachment(provider, before) : false;
+  return pasteImageBlob(target, dataUrl, filename) ? verifyAttachment(provider, before, errorsBefore) : false;
 }
 // The interceptor is installed before the page's upload button is activated and restored on every path.
-async function installMainWorldClickInterceptor(dataUrl) {
+async function installMainWorldClickInterceptor(dataUrl, filename = 'screenshot.png') {
   const token = `glance-${Date.now()}-${Math.random()}`;
   await webFrame.executeJavaScript(`(() => {
     const original = HTMLInputElement.prototype.click;
@@ -189,7 +231,7 @@ async function installMainWorldClickInterceptor(dataUrl) {
     const injectFileFromDataUrl = ${injectFileFromDataUrl.toString()};
     const patched = function(...args) {
       if (this.type !== 'file') return original.apply(this, args);
-      state.intercepted = injectFileFromDataUrl(this, ${JSON.stringify(dataUrl)});
+      state.intercepted = injectFileFromDataUrl(this, ${JSON.stringify(dataUrl)}, ${JSON.stringify(filename)});
       restore();
     };
     function restore() {
@@ -202,9 +244,10 @@ async function installMainWorldClickInterceptor(dataUrl) {
   })()`);
   return async () => { await webFrame.executeJavaScript(`if (window.__glance_interceptor_state?.token === ${JSON.stringify(token)}) window.__glance_interceptor_state.restore();`).catch(() => {}); };
 }
-async function uploadViaTriggerSequence(strategy, dataUrl) {
+async function uploadViaTriggerSequence(strategy, dataUrl, filename) {
   const provider = detectActiveProvider();
   const before = attachmentSnapshot(provider);
+  const errorsBefore = activeErrorTexts(provider);
   const selectors = strategy.triggerSelectors || [];
   let attempted = false;
   for (let index = 0; index < selectors.length; index++) {
@@ -212,9 +255,9 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
     const element = await waitForElement(selectors[index], strategy.waitTimeoutMs ?? 1200);
     if (!element) continue;
     if (index === selectors.length - 1) {
-      if (element.matches('input[type="file"]')) { injectFileFromDataUrl(element, dataUrl); attempted = true; }
+      if (element.matches('input[type="file"]')) { injectFileFromDataUrl(element, dataUrl, filename); attempted = true; }
       else {
-        const restore = await installMainWorldClickInterceptor(dataUrl);
+        const restore = await installMainWorldClickInterceptor(dataUrl, filename);
         try {
           element.click();
           await delay(strategy.clickGapMs ?? 400);
@@ -225,38 +268,42 @@ async function uploadViaTriggerSequence(strategy, dataUrl) {
   }
   if (!attempted) {
     const input = [...document.querySelectorAll('input[type="file"]')].find(node => !node.disabled && (!node.accept || /image|png|\*/i.test(node.accept)));
-    if (input) { injectFileFromDataUrl(input, dataUrl); attempted = true; }
-    else attempted = pasteImageBlob(editorFor(provider), dataUrl);
+    if (input) { injectFileFromDataUrl(input, dataUrl, filename); attempted = true; }
+    else attempted = pasteImageBlob(editorFor(provider), dataUrl, filename);
   }
-  return attempted ? verifyAttachment(provider, before) : false;
+  return attempted ? verifyAttachment(provider, before, errorsBefore) : false;
 }
 async function uploadForProvider(provider, arg) {
   const dataUrl = typeof arg === 'string' ? arg : arg?.dataUrl;
+  const filename = (typeof arg === 'object' && arg?.filename)
+    ? arg.filename
+    : (testMode ? 'screenshot.png' : generateScreenshotFilename());
   if (!dataUrl || cancelled()) return false;
-  if (arg?.strategy?.type === 'triggerSequence') return uploadViaTriggerSequence(arg.strategy, dataUrl);
+  if (arg?.strategy?.type === 'triggerSequence') return uploadViaTriggerSequence(arg.strategy, dataUrl, filename);
   const before = attachmentSnapshot(provider);
+  const errorsBefore = activeErrorTexts(provider);
   const input = [...document.querySelectorAll('input[type="file"]')].find(node => !node.disabled && (!node.accept || /image|png|\*/i.test(node.accept)));
   const editor = editorFor(provider);
   const preferFile = arg?.preferFileInput || arg?.strategy?.type === 'fileInput' || provider === 'gemini' || provider === 'perplexity';
   if (input && (preferFile || !editor)) {
-    injectFileFromDataUrl(input, dataUrl);
-    return verifyAttachment(provider, before);
+    injectFileFromDataUrl(input, dataUrl, filename);
+    return verifyAttachment(provider, before, errorsBefore);
   }
   if (provider === 'perplexity') {
     const dropzone = document.querySelector('[data-testid*="dropzone"], [role="presentation"][tabindex]');
     if (dropzone) {
-      const transfer = new DataTransfer(); transfer.items.add(dataUrlToFile(dataUrl));
+      const transfer = new DataTransfer(); transfer.items.add(dataUrlToFile(dataUrl, filename));
       for (const type of ['dragenter', 'dragover', 'drop']) dropzone.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer }));
-      return verifyAttachment(provider, before);
+      return verifyAttachment(provider, before, errorsBefore);
     }
   }
   if (editor) {
-    pasteImageBlob(editor, dataUrl);
+    pasteImageBlob(editor, dataUrl, filename);
     // No automatic second delivery after an ambiguous paste: it may still be uploading.
-    return verifyAttachment(provider, before);
+    return verifyAttachment(provider, before, errorsBefore);
   }
-  if (input) { injectFileFromDataUrl(input, dataUrl); return verifyAttachment(provider, before); }
-  if (provider === 'gemini') return uploadViaTriggerSequence({ triggerSelectors: ['[aria-label="Upload & tools"]', '[data-test-id="hidden-local-file-upload-button"]'] }, dataUrl);
+  if (input) { injectFileFromDataUrl(input, dataUrl, filename); return verifyAttachment(provider, before, errorsBefore); }
+  if (provider === 'gemini') return uploadViaTriggerSequence({ triggerSelectors: ['[aria-label="Upload & tools"]', '[data-test-id="hidden-local-file-upload-button"]'] }, dataUrl, filename);
   return false;
 }
 const uploadScreenshotToGemini = arg => uploadForProvider('gemini', arg);
@@ -428,7 +475,10 @@ async function runRendererOperation(payload = {}, type) {
   try {
     if (type === 'capture') {
       showToast('Attaching screenshot…');
-      if (!payload.dataUrl || !await uploadScreenshot(payload.dataUrl)) throw new Error('Attachment could not be confirmed. Check the image preview before retrying; nothing was auto-sent.');
+      const uploadArgs = typeof payload === 'object'
+        ? { dataUrl: payload.dataUrl, filename: payload.filename }
+        : payload.dataUrl;
+      if (!payload.dataUrl || !await uploadScreenshot(uploadArgs)) throw new Error('Attachment could not be confirmed. Check the image preview before retrying; nothing was auto-sent.');
       if (cancelled()) throw new Error('Operation cancelled.');
       if (payload.prompt && !await injectPrompt(payload.prompt)) throw new Error('Image attached, but the prompt could not be inserted. Check the conversation.');
       if (payload.autoSubmit) {

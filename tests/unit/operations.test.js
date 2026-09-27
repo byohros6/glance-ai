@@ -19,11 +19,32 @@ suite.test('The lock lasts until renderer acknowledgement, and rejects another c
   assert.equal(messages.length, 1);
   const payload = messages[0][1];
   assert.equal(payload.autoSubmit, true);
+  assert.ok(typeof payload.filename === 'string' && payload.filename.startsWith('screenshot_') && payload.filename.endsWith('.png'));
   assert.equal(coordinator.complete({}, { id: payload.id, ok: true }), false);
   assert.equal(coordinator.complete(win, { id: 'wrong', ok: true }), false);
   coordinator.complete(win, { id: payload.id, ok: true });
   assert.equal((await pending).ok, true);
   assert.equal(coordinator.active, null);
+});
+suite.test('Consecutive captures receive distinct unique filenames', async () => {
+  const { win, coordinator, messages } = fixture();
+  const op1 = coordinator.run(win);
+  await tick();
+  const id1 = messages[0][1].id;
+  const name1 = messages[0][1].filename;
+  coordinator.complete(win, { id: id1, ok: true });
+  await op1;
+
+  const op2 = coordinator.run(win);
+  await tick();
+  const id2 = messages[1][1].id;
+  const name2 = messages[1][1].filename;
+  coordinator.complete(win, { id: id2, ok: true });
+  await op2;
+
+  assert.notEqual(name1, name2, 'Each capture must have a distinct unique filename');
+  assert.match(name1, /^screenshot_\d+_\d+\.png$/);
+  assert.match(name2, /^screenshot_\d+_\d+\.png$/);
 });
 suite.test('Cancelled capture cannot inject into a changed conversation', async () => {
   const { win, coordinator, messages } = fixture();

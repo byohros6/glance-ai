@@ -70,7 +70,7 @@ suite.test('BrowserWindow applies clamped opacity without error', () => {
 app.whenReady().then(async () => {
   const success = await suite.run();
   if (win && !win.isDestroyed()) {
-    win.close();
+    win.destroy();
   }
   app.exit(success ? 0 : 1);
 });

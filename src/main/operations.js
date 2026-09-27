@@ -1,9 +1,18 @@
 import { randomUUID } from 'node:crypto';
 
+let screenshotSeq = 0;
+export function generateScreenshotFilename() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  screenshotSeq = (screenshotSeq + 1) % 10000;
+  return `screenshot_${time}_${screenshotSeq}.png`;
+}
+
 // Own the entire operation, including renderer upload and submission acknowledgement.
 export class OperationCoordinator {
-  constructor({ capture, settings, restore, timeoutMs = 45000 }) {
-    Object.assign(this, { capture, settings, restore, timeoutMs });
+  constructor({ capture, settings, restore, timeoutMs = 45000, getFilename = generateScreenshotFilename }) {
+    Object.assign(this, { capture, settings, restore, timeoutMs, getFilename });
     this.active = null;
   }
 
@@ -47,7 +56,8 @@ export class OperationCoordinator {
         if (this.active !== operation) return await completed;
         if (!dataUrl) throw new Error('Screen capture failed. Please try again.');
         if (win.isDestroyed() || win.webContents.getURL() !== url) throw new Error('The conversation changed during capture. Nothing was attached.');
-        win.webContents.send('action:attach-screenshot', { id, dataUrl, prompt: settings.prompt, autoSubmit: settings.autoSubmit });
+        const filename = typeof this.getFilename === 'function' ? this.getFilename() : generateScreenshotFilename();
+        win.webContents.send('action:attach-screenshot', { id, dataUrl, prompt: settings.prompt, autoSubmit: settings.autoSubmit, filename });
       } else {
         win.webContents.send('action:submit', { id });
       }
