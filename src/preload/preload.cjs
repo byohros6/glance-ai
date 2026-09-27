@@ -135,10 +135,26 @@ function detectActiveProvider(value = '', doc = document) {
   return 'gemini';
 }
 const providerAdapters = {
-  gemini: { editor: 'rich-textarea .ql-editor, .ql-editor, [contenteditable="true"]', send: '[aria-label="Send message"], [aria-label="Send prompt"], button.send-button', attachments: 'file-preview, .file-preview, [data-test-id*="attachment"], [aria-label*="Remove file" i], [aria-label*="Remove image" i]' },
-  chatgpt: { editor: '#prompt-textarea, form textarea, [contenteditable="true"]', send: 'button[data-testid="send-button"], button[data-testid="fruitjuice-send-button"], button[aria-label="Send prompt"], button[aria-label="Send message"]', attachments: '[data-testid*="attachment"], [data-testid*="file-preview"], [aria-label*="Remove file" i], [aria-label*="Remove image" i]' },
-  claude: { editor: '.ProseMirror, fieldset [contenteditable="true"], textarea', send: 'button[aria-label="Send Message"], button[aria-label="Send message"], button[data-testid*="send"]', attachments: '[data-testid*="attachment"], [data-testid*="file-thumbnail"], [aria-label*="Remove" i][aria-label*="file" i], [aria-label*="Remove" i][aria-label*="image" i]' },
-  perplexity: { editor: 'textarea, [contenteditable="true"]', send: 'button[aria-label="Submit"], button[aria-label="Ask follow-up"], button[data-testid*="submit"]', attachments: '[data-testid*="attachment"], [data-testid*="file-preview"], [aria-label*="Remove file" i], [aria-label*="Remove image" i]' }
+  gemini: {
+    editor: 'rich-textarea .ql-editor, .ql-editor, [contenteditable="true"]',
+    send: '[aria-label="Send message"], [aria-label="Send prompt"], button.send-button',
+    attachments: 'file-preview, .file-preview, [data-test-id*="attachment"], [data-testid*="attachment"], [data-test-id*="file"], [data-testid*="file"], [data-test-id*="uploader"], [data-testid*="uploader"], uploader-file-card, file-card, [class*="file-card" i], [class*="uploader-card" i], [class*="attachment" i], [aria-label*="Remove" i], [aria-label*="Delete" i], [aria-label*="Dismiss" i]'
+  },
+  chatgpt: {
+    editor: '#prompt-textarea, form textarea, [contenteditable="true"]',
+    send: 'button[data-testid="send-button"], button[data-testid="fruitjuice-send-button"], button[aria-label="Send prompt"], button[aria-label="Send message"]',
+    attachments: '[data-testid*="attachment"], [data-testid*="file-preview"], [aria-label*="Remove" i], [aria-label*="Delete" i]'
+  },
+  claude: {
+    editor: '.ProseMirror, fieldset [contenteditable="true"], textarea',
+    send: 'button[aria-label="Send Message"], button[aria-label="Send message"], button[data-testid*="send"]',
+    attachments: '[data-testid*="attachment"], [data-testid*="file-thumbnail"], [aria-label*="Remove" i], [aria-label*="Delete" i]'
+  },
+  perplexity: {
+    editor: 'textarea, [contenteditable="true"]',
+    send: 'button[aria-label="Submit"], button[aria-label="Ask follow-up"], button[data-testid*="submit"]',
+    attachments: '[data-testid*="attachment"], [data-testid*="file-preview"], [aria-label*="Remove" i], [aria-label*="Delete" i]'
+  }
 };
 let rendererOperation = null;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -147,15 +163,26 @@ function visible(element) { return !!element && !element.hidden && getComputedSt
 function editorFor(provider = detectActiveProvider()) {
   return [...document.querySelectorAll(providerAdapters[provider].editor)].find(visible) || null;
 }
+function inputContainerFor(provider = detectActiveProvider()) {
+  const editor = editorFor(provider);
+  if (!editor) return document.body;
+  return editor.closest('form, .input-area, .text-input-field, fieldset, input-container, [class*="input" i], [class*="prompt" i]') || editor.parentElement?.parentElement || editor.parentElement || document.body;
+}
 function editorText(editor) { return (editor?.value ?? editor?.innerText ?? editor?.textContent ?? '').trim(); }
 function attachmentNodes(provider) {
-  return [...document.querySelectorAll(providerAdapters[provider].attachments)].filter(visible);
+  const container = inputContainerFor(provider);
+  const selector = providerAdapters[provider].attachments;
+  const nodes = [...document.querySelectorAll(selector)];
+  const containerImages = [...container.querySelectorAll('img')].filter(img => {
+    const src = img.src || '';
+    return src.startsWith('blob:') || src.startsWith('data:') || src.includes('googleusercontent') || /preview|thumb|card/i.test(img.className || '');
+  });
+  return [...new Set([...nodes, ...containerImages])].filter(visible);
 }
 function attachmentSnapshot(provider) { return new Map(attachmentNodes(provider).map(node => [node, node.outerHTML])); }
 function uploadPending(provider) {
-  const editor = editorFor(provider);
-  const scope = editor?.closest('form') || editor?.parentElement || document.body;
-  return [...scope.querySelectorAll('[role="progressbar"], [aria-busy="true"], [data-testid*="uploading"], [data-test-id*="uploading"]')].some(visible);
+  const container = inputContainerFor(provider);
+  return [...container.querySelectorAll('[role="progressbar"], [aria-busy="true"], [data-testid*="uploading"], [data-test-id*="uploading"], mat-progress-bar')].some(visible);
 }
 async function waitForOutcome(predicate, timeout = testMode ? 1200 : 12000) {
   const deadline = Date.now() + timeout;
