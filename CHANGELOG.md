@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.7
+
+- Eliminate fade-in transition and DirectComposition redraw hitch when unhiding the overlay window with Ctrl+H, making reveal instantaneous.
+- Configure overlay window as an opaque frameless window (`transparent: false`) with window-level alpha (`SetLayeredWindowAttributes`), preserving variable opacity, click-through, always-on-top, and native edge resizing without compositor fade delay.
+- Expand native DWM attribute configuration to include `DWMWA_WINDOW_CORNER_PREFERENCE` (`DWMWCP_DONOTROUND`) to bypass Windows 11 shell XAML composition restore animations.
+
 ## 1.2.6
 
 - Fix duplicate attachment rejection in Gemini ("You already uploaded a file named screenshot.png") by generating distinct, timestamped sequential screenshot filenames (`screenshot_HHMMSS_seq.png`) across capture operations.

@@ -29,6 +29,8 @@ if ($owner -ne ${process.pid}) { throw 'Window no longer belongs to this process
 [int]$disabled = 1
 $result = [GlanceWindowEffects]::DwmSetWindowAttribute($handle, 3, [ref]$disabled, 4)
 if ($result -ne 0) { throw "DwmSetWindowAttribute failed: $result" }
+[int]$noRound = 1
+[void][GlanceWindowEffects]::DwmSetWindowAttribute($handle, 33, [ref]$noRound, 4)
 `;
   const pending = queue = queue.then(() =>
     run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {

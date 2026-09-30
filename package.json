@@ -1,6 +1,6 @@
 {
   "name": "glance-ai",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "A lightweight, always-on-top workspace companion for AI assistants",
   "main": "src/main/main.js",
   "type": "module",
