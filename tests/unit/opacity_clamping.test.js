@@ -53,8 +53,9 @@ suite.test('Step up shortcut logic clamps at 1.0 and rounds cleanly', () => {
   assert.strictEqual(stepUp(1.0), 1.0);
 });
 
-suite.test('BrowserWindow applies clamped opacity without error', () => {
+suite.test('BrowserWindow applies clamped opacity without error', async () => {
   win = new BrowserWindow({ show: false });
+  await win.loadURL('about:blank');
 
   const testValues = [-0.5, 0.0, 0.14, 0.15, 0.5, 0.95, 1.0, 1.5];
   for (const raw of testValues) {

@@ -31,7 +31,7 @@ suite.test('Production preload loads in its isolated context', async () => {
       additionalArguments: ['--glance-test-api'],
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   });
 
@@ -129,6 +129,27 @@ suite.test('2-Step Trigger sequence handles dynamic DOM elements and triggers ma
   assert.strictEqual(result.filesCount, 1, 'Dynamic 2-step sequence attached file');
   assert.strictEqual(result.fileName, 'screenshot.png', 'Attached file is screenshot.png');
   assert.strictEqual(result.fileInjectedEvent, true, 'Change event dispatched');
+});
+
+suite.test('Button-triggered upload intercepts the file picker and restores its prototype', async () => {
+  const result = await win.webContents.executeJavaScript(`(async () => {
+    const input = document.getElementById('upload-file-input');
+    input.value = '';
+    const original = HTMLInputElement.prototype.click;
+    const button = document.createElement('button');
+    button.id = 'picker-trigger-regression';
+    button.onclick = () => input.click();
+    document.body.append(button);
+    try {
+      const ok = await window.upload.uploadImage({dataUrl: '${samplePngDataUrl}', strategy: {
+        type: 'triggerSequence', triggerSelectors: ['#picker-trigger-regression'], clickGapMs: 60
+      }});
+      return { ok, count: input.files.length, restored: HTMLInputElement.prototype.click === original };
+    } finally { button.remove(); }
+  })()`);
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 1);
+  assert.equal(result.restored, true);
 });
 
 suite.test('Direct input fallback activates when trigger selectors fail completely', async () => {

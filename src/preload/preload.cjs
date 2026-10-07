@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 const testMode = process.argv.includes('--glance-test-api') && location.protocol === 'file:' && /_mock\.html$/.test(location.pathname);
 const isDashboard = location.protocol === 'file:' && location.pathname.replaceAll('\\', '/').endsWith('/renderer/dashboard.html');

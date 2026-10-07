@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.8
+
+- Restore the Electron import required by button-triggered file uploads; add a regression that exercises the picker interception and prototype restoration in the production sandbox.
+- Wait for the native opacity test's renderer to load before teardown, avoiding a startup/shutdown race.
+- Prepare the public repository with organized documentation, contributor guidance, verified release assets, and a draft release workflow.
+- Preserve the 1.2.7 sign-in routing, native provider interface, shortcut defaults, and instant window restore.
+
 ## 1.2.7
 
 - Eliminate fade-in transition and DirectComposition redraw hitch when unhiding the overlay window with Ctrl+H, making reveal instantaneous.
