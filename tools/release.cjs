@@ -36,13 +36,10 @@ function verify(directory, version) {
   }
   return manifest;
 }
-function prepare(root = process.cwd()) {
-  const info = versionInfo(root);
-  if (execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()) throw new Error('Commit changes before preparing release assets');
+function verifyArchive(archive, root, version) {
   const asar = require('@electron/asar');
-  const archive = path.join(root, 'dist/win-unpacked/resources/app.asar');
   const packaged = JSON.parse(asar.extractFile(archive, 'package.json'));
-  if (packaged.version !== info.version) throw new Error('Packaged version does not match source');
+  if (packaged.version !== version) throw new Error('Packaged version does not match source');
   const files = asar.listPackage(archive).map(name => name.replace(/^[/\\]/, '').replaceAll('\\', '/'));
   if (files.some(name => !['src', 'LICENSE', 'package.json'].includes(name) && !name.startsWith('src/'))) throw new Error('Unexpected file in application archive');
   if (!files.includes('src/main/main.js') || !files.includes('src/preload/preload.cjs')) throw new Error('Incomplete application archive');
@@ -51,8 +48,13 @@ function prepare(root = process.cwd()) {
     const source = path.join(root, name);
     if (name === 'package.json') continue; // Builder removes development-only metadata.
     if (!fs.existsSync(source)) throw new Error(`Packaged file is absent from source: ${name}`);
-    if (fs.statSync(source).isFile() && !asar.extractFile(archive, name).equals(fs.readFileSync(source))) throw new Error(`Packaged file differs from source: ${name}`);
+    if (fs.statSync(source).isFile() && !asar.extractFile(archive, path.normalize(name)).equals(fs.readFileSync(source))) throw new Error(`Packaged file differs from source: ${name}`);
   }
+}
+function prepare(root = process.cwd()) {
+  const info = versionInfo(root);
+  if (execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim()) throw new Error('Commit changes before preparing release assets');
+  verifyArchive(path.join(root, 'dist/win-unpacked/resources/app.asar'), root, info.version);
   const directory = path.join(root, 'dist');
   for (const name of names(info.version).slice(0, 2)) {
     const descriptor = fs.openSync(path.join(directory, name), 'r');
@@ -74,4 +76,4 @@ if (require.main === module) {
     else throw new Error('Use check, prepare, or verify');
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
-module.exports = { versionInfo, writeChecksums, verify, prepare };
+module.exports = { versionInfo, writeChecksums, verify, verifyArchive, prepare };

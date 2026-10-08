@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { writeChecksums, verify, versionInfo } = require('../../tools/release.cjs');
+const { writeChecksums, verify, verifyArchive, versionInfo } = require('../../tools/release.cjs');
 
 test('Release verification detects modified assets and rejects duplicate/path entries', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'glance-integrity-'));
@@ -27,4 +27,28 @@ test('Release tags must match checked-in version metadata', () => {
   const version = JSON.parse(fs.readFileSync('package.json')).version;
   assert.equal(versionInfo(process.cwd(), `v${version}`).version, version);
   assert.throws(() => versionInfo(process.cwd(), 'v99.0.0'), /tag/);
+});
+
+test('Real archives match source and reject stale or extra files', async () => {
+  const asar = require('@electron/asar');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'glance-archive-'));
+  const source = path.join(directory, 'source');
+  try {
+    fs.mkdirSync(path.join(source, 'src/main'), {recursive: true});
+    fs.mkdirSync(path.join(source, 'src/preload'), {recursive: true});
+    fs.writeFileSync(path.join(source, 'package.json'), JSON.stringify({version: '1.2.8'}));
+    fs.writeFileSync(path.join(source, 'LICENSE'), 'fixture license');
+    fs.writeFileSync(path.join(source, 'src/main/main.js'), '// main fixture');
+    fs.writeFileSync(path.join(source, 'src/preload/preload.cjs'), '// preload fixture');
+    const archive = path.join(directory, 'app.asar');
+    await asar.createPackage(source, archive);
+    assert.doesNotThrow(() => verifyArchive(archive, source, '1.2.8'));
+    assert.throws(() => verifyArchive(archive, source, '1.2.9'), /version/);
+    fs.appendFileSync(path.join(source, 'src/main/main.js'), '\n// changed');
+    assert.throws(() => verifyArchive(archive, source, '1.2.8'), /differs from source/);
+    fs.writeFileSync(path.join(source, 'private-report.txt'), 'must not ship');
+    const extraArchive = path.join(directory, 'extra.asar');
+    await asar.createPackage(source, extraArchive);
+    assert.throws(() => verifyArchive(extraArchive, source, '1.2.8'), /Unexpected file/);
+  } finally { fs.rmSync(directory, {recursive: true, force: true}); }
 });
