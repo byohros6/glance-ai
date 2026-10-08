@@ -38,7 +38,7 @@
     "url": "https://github.com/byohros6/glance-ai.git"
   },
   "devDependencies": {
-    "electron": "44.3.0",
+    "electron": "44.5.1",
     "electron-builder": "26.15.3"
   },
   "build": {
