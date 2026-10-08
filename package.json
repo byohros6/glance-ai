@@ -9,10 +9,15 @@
     "test": "node tests/runner.js",
     "test:smoke": "node tests/runner.js production_app",
     "test-bench": "node tools/focus-tester/server.js",
-    "dist": "electron-builder --win",
-    "dist:portable": "electron-builder --win portable",
-    "dist:installer": "electron-builder --win nsis",
-    "check": "node tools/check.cjs"
+    "dist": "electron-builder --win --publish never",
+    "dist:portable": "electron-builder --win portable --publish never",
+    "dist:installer": "electron-builder --win nsis --publish never",
+    "check": "node tools/check.cjs",
+    "verify:repo": "node tools/repo-check.cjs",
+    "test:release": "node --test tests/release/*.test.cjs",
+    "release:check": "node tools/release.cjs check",
+    "release:prepare": "node tools/release.cjs prepare",
+    "release:verify": "node tools/release.cjs verify"
   },
   "keywords": [
     "ai",
@@ -26,15 +31,15 @@
     "developer-tools",
     "workspace"
   ],
-  "author": "",
+  "author": "byohros6",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/byohros6/glance-ai.git"
   },
   "devDependencies": {
-    "electron": "^44.3.0",
-    "electron-builder": "^26.15.3"
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3"
   },
   "build": {
     "appId": "com.glanceai.app",
@@ -73,5 +78,9 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "homepage": "https://github.com/byohros6/glance-ai#readme",
+  "bugs": {
+    "url": "https://github.com/byohros6/glance-ai/issues"
   }
 }

@@ -2,6 +2,8 @@
 
 Run `npm test` on Windows with Node 22.12+ and dependencies installed. `npm run check` checks JavaScript syntax. `npm run test:smoke` runs the production-entry integration suite.
 
+`npm run verify:repo` checks version consistency, pinned dependencies, required documentation, and accidental tracking of local artifacts. `npm run test:release` runs Node tests for checksum tampering, unsafe asset names, and mismatched release tags. These tests run separately from the Electron suites.
+
 The runner discovers `*.test.js` under `unit`, `window`, `injection`, `e2e`, and `stress`. To narrow a run, use `node tests/runner.js production_app` or another filename fragment. Each suite gets a unique temporary Electron userData profile; the second-instance helper inherits that profile. Normal app settings are never used. Set `GLANCE_TEST_REPORT` to a writable filename to retain the complete results as JSON.
 
 A pass requires zero exit status, no termination signal or timeout, and one structured `GLANCE_TEST_RESULT` with at least one passing assertion and no failures. Log substrings cannot turn a failed process into a pass. Unhandled main-process errors fail the suite. Every suite has a 90-second limit.

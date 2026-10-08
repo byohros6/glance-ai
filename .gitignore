@@ -15,3 +15,17 @@ temp_*.json
 
 # Agent workspaces
 .agents/
+
+# Local reviews, test reports, and credentials
+review/
+reports/
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+*.pem
+*.key
+*.pfx
+*.p12
+coverage/

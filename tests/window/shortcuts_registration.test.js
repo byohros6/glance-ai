@@ -7,8 +7,9 @@ const suite = createTestSuite('Tier 1: Global Shortcuts Registration');
 
 let win = null;
 
-suite.test('Registers all 14 global shortcuts with operating system', () => {
+suite.test('Registers all 14 global shortcuts with operating system', async () => {
   win = new BrowserWindow({ show: false });
+  await win.loadURL('about:blank');
   registerGlobalShortcuts(() => win);
 
   const shortcuts = store.get('shortcuts');

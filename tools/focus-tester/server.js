@@ -26,8 +26,8 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  const url = `http://localhost:${PORT}`;
+server.listen(PORT, '127.0.0.1', () => {
+  const url = `http://127.0.0.1:${PORT}`;
   console.log(`\n=================================================`);
   console.log(`  Glance AI Event & Focus Test Bench running!`);
   console.log(`  URL: ${url}`);

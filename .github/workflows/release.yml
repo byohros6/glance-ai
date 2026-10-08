@@ -1,0 +1,59 @@
+name: Prepare Windows draft release
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag (for example v1.2.8)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  draft-release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run release:check
+      - run: npm run check
+      - run: npm run verify:repo
+      - run: npm run test:release
+      - run: npm test
+      - run: npm run dist
+      - name: Test packaged application
+        shell: pwsh
+        run: |
+          $env:GLANCE_TEST_APP_ROOT = Join-Path $env:GITHUB_WORKSPACE 'dist/win-unpacked/resources/app.asar'
+          npm run test:smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: npm run release:prepare
+      - run: npm run release:verify
+      - name: Create draft without replacing existing releases
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'This release already exists. Existing assets will not be replaced.' }
+          $version = $env:RELEASE_TAG.Substring(1)
+          gh release create $env:RELEASE_TAG "dist/Glance-AI-Setup-$version.exe" "dist/Glance-AI-Portable-$version.exe" dist/SHA256SUMS.txt dist/release-metadata.json --repo $env:GITHUB_REPOSITORY --verify-tag --draft --title "Glance AI $env:RELEASE_TAG" --notes-file "docs/releases/$env:RELEASE_TAG.md"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

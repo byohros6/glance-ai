@@ -11,4 +11,4 @@ function check(directory) {
     }
   }
 }
-check('src'); check('tests');
+check('src'); check('tests'); check('tools');

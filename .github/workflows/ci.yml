@@ -1,20 +1,42 @@
 name: Verify Windows app
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-and-package:
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm run check
+      - run: npm run verify:repo
+      - run: npm run test:release
       - run: npm test
-      - run: npx electron-builder --win --dir
-      - uses: actions/upload-artifact@v4
+      - run: npx electron-builder --win --dir --publish never
+      - name: Test packaged application
+        shell: pwsh
+        run: |
+          $env:GLANCE_TEST_APP_ROOT = Join-Path $env:GITHUB_WORKSPACE 'dist/win-unpacked/resources/app.asar'
+          npm run test:smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: success()
         with:
           name: windows-unpacked
           path: dist/win-unpacked
+          retention-days: 7

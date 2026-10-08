@@ -3,7 +3,8 @@
 ## 1.2.8
 
 - Restore the Electron import required by button-triggered file uploads; add a regression that exercises the picker interception and prototype restoration in the production sandbox.
-- Wait for the native opacity test's renderer to load before teardown, avoiding a startup/shutdown race.
+- Wait for native opacity and shortcut test renderers to load before teardown, avoiding a startup/shutdown race.
+- Update the compatible build-tool cache dependency to address its high-severity advisory.
 - Prepare the public repository with organized documentation, contributor guidance, verified release assets, and a draft release workflow.
 - Preserve the 1.2.7 sign-in routing, native provider interface, shortcut defaults, and instant window restore.
 

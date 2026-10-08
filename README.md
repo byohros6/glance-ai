@@ -2,7 +2,19 @@
 
 Glance AI keeps Gemini, ChatGPT, Claude, or Perplexity in an always-on-top Windows overlay. It uses the provider's normal website and your existing account.
 
-## Preserved controls
+## Download
+
+Get the installer or portable executable from [GitHub Releases](https://github.com/byohros6/glance-ai/releases). The installer adds Start menu and desktop shortcuts; the portable executable runs without installation. Windows is required.
+
+Release assets include SHA-256 checksums and the source commit used for the build. See [download verification](docs/releasing.md). Current builds are unsigned, so Windows may show an unknown-publisher warning.
+
+## Using Glance AI
+
+Choose a provider in Settings and sign in through its normal interface. Glance AI keeps that interface, including the provider's conversation history and controls. Use the toolbar or shortcuts to capture, send, move, and adjust the overlay.
+
+![Glance AI settings](docs/images/dashboard.png)
+
+## Controls
 
 | Shortcut | Action |
 | --- | --- |
@@ -36,7 +48,7 @@ npm run test:smoke
 npm run dist
 ```
 
-`run.bat` launches the app. `build.bat` checks syntax, runs the tests, and builds the installer and portable executable, stopping on failure. Outputs are under `dist/` and are intentionally not committed. Configure electron-builder signing credentials for signed distribution; local builds can remain unsigned. Building does not publish a release.
+`run.bat` launches the app. `build.bat` checks the repository, runs the tests, builds both executables, and prepares checksums. Commit changes first when preparing release assets. Outputs are under `dist/` and are intentionally not committed. Building does not publish a release. See the [release guide](docs/releasing.md) for the draft-release workflow.
 
 The diagnostic focus bench is available with `npm run test-bench` or `open-test-bench.bat`.
 
@@ -57,6 +69,9 @@ Provider interfaces can change. The automated suite uses local fixtures, includi
 - `src/preload/preload.cjs`: single canonical preload; provider adapters and overlay toolbar. Only the local dashboard receives the settings bridge.
 - `src/preload/auth.cjs`: capability-free authentication preload.
 - `src/renderer/`: dashboard.
-- `tests/`: unit, native-window, provider-fixture, production-entry integration, and stress tests. See `TEST_INFRA.md`.
+- `tests/`: unit, native-window, provider-fixture, production-entry integration, stress, and release-integrity tests.
+- `tools/`: development diagnostics and repository/release checks.
+- `docs/`: architecture, testing, release instructions, and screenshots.
+- `.github/`: verification, draft releases, and contributor templates.
 
-MIT licensed; see `LICENSE`.
+See [architecture](docs/architecture.md), [testing](docs/testing.md), [contributing](CONTRIBUTING.md), [security reporting](SECURITY.md), and the [changelog](CHANGELOG.md). MIT licensed; see [LICENSE](LICENSE).
