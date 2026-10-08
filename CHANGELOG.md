@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.9
+
+- Check for newer published GitHub releases in the background after startup and every 12 hours.
+- Prompt once per newer version each session and open the matching installer or portable download, with a release-page fallback.
+- Add Check for updates and download controls in Settings, with clear offline/rate-limit messages.
+- Preserve native provider UI, authentication, shortcuts, and settings; update checks never block startup or window movement.
+
 ## 1.2.8
 
 - Restore the Electron import required by button-triggered file uploads; add a regression that exercises the picker interception and prototype restoration in the production sandbox.

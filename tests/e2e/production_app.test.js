@@ -1,4 +1,4 @@
-import { app, globalShortcut, ipcMain, session, desktopCapturer, screen, nativeImage } from 'electron';
+import { app, globalShortcut, ipcMain, session, desktopCapturer, screen, nativeImage, shell, dialog } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -8,6 +8,11 @@ const suite = createTestSuite('Production entry point: isolation, settings, capt
 let main;
 const handlers = new Map();
 const shortcuts = new Map();
+const openedLinks = [];
+const updatePrompts = [];
+shell.openExternal = async url => { openedLinks.push(url); };
+dialog.showMessageBox = async options => { updatePrompts.push(options); return {response: 1}; };
+globalThis.fetch = async () => new Response(JSON.stringify({tag_name: 'v99.0.0', draft: false, prerelease: false, assets: []}));
 const realHandle = ipcMain.handle.bind(ipcMain);
 ipcMain.handle = (channel, handler) => { handlers.set(channel, handler); realHandle(channel, handler); };
 globalShortcut.unregisterAll = () => shortcuts.clear();
@@ -20,6 +25,26 @@ async function until(predicate, timeout = 5000) {
 }
 function windows() { return main.getWindows(); }
 async function dashboard(script) { return windows().dashboardWindow.webContents.executeJavaScript(script); }
+suite.test('Settings update check shows the newer release and opens only the fixed repository', async () => {
+  await dashboard("document.getElementById('btn-check-updates').click()");
+  await until(async () => await dashboard("document.getElementById('update-status').textContent.includes('99.0.0') && !document.getElementById('btn-check-updates').disabled"));
+  await dashboard("document.getElementById('btn-open-update').click()");
+  await until(() => openedLinks.length > 0);
+  assert.equal(openedLinks.pop(), 'https://github.com/byohros6/glance-ai/releases/tag/v99.0.0');
+  if (process.env.GLANCE_TEST_SCREENSHOTS) {
+    await dashboard("document.getElementById('btn-check-updates').scrollIntoView({block:'center'})");
+    await until(async () => await dashboard("(() => {const r=document.getElementById('btn-open-update').getBoundingClientRect();return r.top>=40 && r.bottom<innerHeight;})()"));
+    await fs.writeFile(path.join(process.env.GLANCE_TEST_SCREENSHOTS, 'updates.png'), (await windows().dashboardWindow.webContents.capturePage()).toPNG());
+  }
+});
+suite.test('Background update prompt offers Later once per version without opening the browser', async () => {
+  await main.checkUpdates(true);
+  await main.checkUpdates(true);
+  assert.equal(updatePrompts.length, 1);
+  assert.equal(updatePrompts[0].message, 'Glance AI 99.0.0 is available');
+  assert.deepEqual(updatePrompts[0].buttons, ['Open release', 'Later']);
+  assert.equal(openedLinks.length, 0);
+});
 suite.test('Ctrl+B opens the overlay once, with no privileged page bridge', async () => {
   shortcuts.get('CommandOrControl+B')();
   await until(async () => {
@@ -103,6 +128,7 @@ suite.test('Main IPC rejects unknown windows, subframes and wrong role', async (
   assert.throws(() => handlers.get('capture-and-attach')({ sender: {}, senderFrame: { url: 'https://chatgpt.com/' } }), /not allowed/);
   assert.throws(() => handlers.get('capture-and-attach')({ sender: win.webContents, senderFrame: { url: win.webContents.getURL() } }), /not allowed/);
   assert.throws(() => handlers.get('save-settings')({ sender: win.webContents, senderFrame: win.webContents.mainFrame }, { prompt: 'malicious' }), /not allowed/);
+  for (const channel of ['check-for-updates', 'open-update', 'get-update-status']) assert.throws(() => handlers.get(channel)({sender: win.webContents, senderFrame: win.webContents.mainFrame}), /not allowed/);
 });
 suite.test('Send rebinding removes its old key; collision and OS failure roll back', async () => {
   main.showDashboard();

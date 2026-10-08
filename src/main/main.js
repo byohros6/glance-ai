@@ -7,6 +7,7 @@ import { captureScreenWithHide } from './screenshot.js';
 import { OperationCoordinator } from './operations.js';
 import { createPermissionPolicy } from './permissions.js';
 import { disableWindowTransitions } from './window-effects.js';
+import { createUpdateChecker, RELEASES_URL } from './updates.js';
 import { PROVIDER_URLS, isAllowedWebURL, isExternalURL, isTrustedSender, requireBoolean } from './security.js';
 import { applyWindowState, restoreWindow, hideWindow, visibleBounds } from './window-state.js';
 export { PROVIDER_URLS };
@@ -44,6 +45,23 @@ let previewTimer = null;
 let previewBounds = null;
 let pauseTimer = null;
 let quitting = false;
+const updates = createUpdateChecker({ currentVersion: app.getVersion(), portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE) });
+const promptedUpdates = new Set();
+export async function checkUpdates(prompt = false) {
+  const result = await updates.check();
+  dashboardWindow?.webContents.send('action:update-status', result);
+  if (prompt && result.status === 'available' && !promptedUpdates.has(result.version) && !quitting) {
+    promptedUpdates.add(result.version);
+    const choice = await dialog.showMessageBox({
+      type: 'info', title: 'Glance AI update available',
+      message: `Glance AI ${result.version} is available`,
+      detail: result.portable ? 'Download the new portable app, quit Glance, and replace your old executable. Your settings are kept.' : 'Download the installer, quit Glance, and run it to update your existing installation. Your settings are kept.',
+      buttons: [result.directDownload ? 'Download update' : 'Open release', 'Later'], defaultId: 1, cancelId: 1
+    });
+    if (choice.response === 0) await shell.openExternal(result.url);
+  }
+  return result;
+}
 const operations = new OperationCoordinator({
   capture: captureScreenWithHide, settings: () => store.getAll(),
   restore: win => applyWindowState(win, store.getAll())
@@ -226,6 +244,9 @@ handle('save-settings', ['dashboard'], value => {
   const result = store.update(value); settingsChanged(); return result;
 });
 handle('get-app-version', ['dashboard'], () => app.getVersion());
+handle('get-update-status', ['dashboard'], () => updates.getState());
+handle('check-for-updates', ['dashboard'], () => checkUpdates());
+handle('open-update', ['dashboard'], () => shell.openExternal(updates.getState().url || RELEASES_URL));
 handle('get-app-mode', both, () => currentMode);
 handle('get-shortcut-status', ['dashboard'], () => shortcutStatus);
 handle('get-focusable', both, () => store.get('focusable'));
@@ -299,6 +320,11 @@ app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionCheckHandler((_contents, permission, origin, details) => permissions.check(origin, permission, details));
   showDashboard();
+  // Network checks run in the background, outside startup and shortcut handling.
+  if (app.isPackaged) {
+    setTimeout(() => checkUpdates(true).catch(() => {}), 12000).unref();
+    setInterval(() => checkUpdates(true).catch(() => {}), 12 * 60 * 60 * 1000).unref();
+  }
   try { register(); } catch (error) { shortcutStatus = { registered: [], failed: [{ error: error.message }] }; notify('Saved shortcuts are invalid. Reset shortcuts in the dashboard.'); }
   const recover = () => {
     if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setBounds(visibleBounds(overlayWindow.getBounds()));

@@ -132,6 +132,29 @@ async function init() {
     return;
   }
 
+  const updateStatus = document.getElementById('update-status');
+  const checkUpdates = document.getElementById('btn-check-updates');
+  const openUpdate = document.getElementById('btn-open-update');
+  function renderUpdate(result) {
+    if (result.status === 'available') {
+      updateStatus.textContent = `Version ${result.version} is available. Download it, quit Glance, and run the new ${result.portable ? 'portable app' : 'installer'}.`;
+      openUpdate.textContent = result.directDownload ? 'Download update' : 'Open release';
+    } else {
+      updateStatus.textContent = result.status === 'current' ? `You're up to date (v${result.currentVersion}).` : result.message || 'Checks for new releases automatically while the app is running.';
+      openUpdate.textContent = 'Open GitHub releases';
+    }
+  }
+  api.onUpdateStatus(renderUpdate);
+  api.getUpdateStatus().then(renderUpdate).catch(error => showToast(error.message));
+  checkUpdates.addEventListener('click', async () => {
+    checkUpdates.disabled = true;
+    updateStatus.textContent = 'Checking for updates…';
+    try { renderUpdate(await api.checkForUpdates()); }
+    catch { updateStatus.textContent = 'Could not check for updates. Try again later.'; }
+    finally { checkUpdates.disabled = false; }
+  });
+  openUpdate.addEventListener('click', () => api.openUpdate().catch(() => showToast('Could not open the browser.')));
+
   try {
     currentSettings = await api.getSettings();
   } catch (e) {

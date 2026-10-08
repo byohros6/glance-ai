@@ -5,7 +5,7 @@ const suite = createTestSuite('Tier 1: Stealth Window Flags & Native OS Integrat
 
 let win = null;
 
-suite.test('Window is created with borderless, transparent, and toolbar flags', () => {
+suite.test('Window is created with borderless, transparent, and toolbar flags', async () => {
   win = new BrowserWindow({
     show: false,
     frame: false,
@@ -16,6 +16,7 @@ suite.test('Window is created with borderless, transparent, and toolbar flags', 
     focusable: true,
     webPreferences: { nodeIntegration: false, contextIsolation: true }
   });
+  await win.loadURL('about:blank');
 
   assert.ok(win, 'BrowserWindow should be instantiated');
   assert.strictEqual(win.isDestroyed(), false, 'Window must not be destroyed');

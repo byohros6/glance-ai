@@ -10,6 +10,8 @@ Release assets include SHA-256 checksums and the source commit used for the buil
 
 ## Using Glance AI
 
+From 1.2.9, Glance checks for newer published releases after startup and every 12 hours. An update prompt opens the matching installer or portable download. You can also use **Settings → App updates → Check for updates**. Download the new version, quit Glance, and run the installer in the same location or replace your portable executable. Settings are retained. Installation is manual; updates require a public repository and a published stable release.
+
 Choose a provider in Settings and sign in through its normal interface. Glance AI keeps that interface, including the provider's conversation history and controls. Use the toolbar or shortcuts to capture, send, move, and adjust the overlay.
 
 ![Glance AI settings](docs/images/dashboard.png)

@@ -49,13 +49,14 @@ suite.test('Silent nudge move offset calculates ±40px delta precisely', () => {
   assert.strictEqual(x, 200);
 });
 
-suite.test('BrowserWindow sets and updates position accurately', () => {
+suite.test('BrowserWindow sets and updates position accurately', async () => {
   win = new BrowserWindow({
     width: 520,
     height: 650,
     show: false,
     frame: false
   });
+  await win.loadURL('about:blank');
 
   win.setPosition(300, 200);
   const [posX, posY] = win.getPosition();
