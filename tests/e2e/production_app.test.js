@@ -119,7 +119,7 @@ suite.test('Dashboard reflects focus and opacity changes made through overlay sh
   shortcuts.get('CommandOrControl+F')();
   shortcuts.get('CommandOrControl+[')();
   main.showDashboard();
-  await until(async () => await dashboard("document.getElementById('toggle-focusable').checked === false && Number(document.getElementById('input-opacity').value) === .85"));
+  await until(async () => await dashboard("document.getElementById('toggle-focusable').checked === false && Number(document.getElementById('input-opacity').value) === .9"));
   await dashboard('window.glanceai.saveSettings({focusable:true,opacity:.95})');
   main.launchOverlay();
 });

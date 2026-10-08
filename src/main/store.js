@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS = {
   windowHeight: 650,
   x: null,
   y: 60,
-  opacity: 0.95,
+  opacity: 1,
   undetectable: true,
   focusable: true,
   clickThrough: false,

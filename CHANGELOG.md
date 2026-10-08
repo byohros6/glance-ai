@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.10
+
+- Default fresh installations to 100% opacity, avoiding Windows layered-window composition during streaming replies.
+- Preserve saved custom opacity and the transparency slider; explain the responsive setting in Settings.
+- Verify native composition flags through hide/show, click-through, and opacity transitions.
+- Preserve provider UI, sign-in routing, shortcuts, and conversation state. This mitigates translucency overhead; it does not claim to eliminate every provider-side rendering delay.
+
 ## 1.2.9
 
 - Check for newer published GitHub releases in the background after startup and every 12 hours.

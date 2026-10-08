@@ -18,7 +18,7 @@ suite.test('DEFAULT_SETTINGS defines correct default geometry and window setting
   assert.strictEqual(DEFAULT_SETTINGS.focusable, true, 'focusable should default to true');
   assert.strictEqual(DEFAULT_SETTINGS.clickThrough, false, 'clickThrough should default to false');
   assert.strictEqual(DEFAULT_SETTINGS.autoSubmit, false, 'autoSubmit should default to false');
-  assert.strictEqual(DEFAULT_SETTINGS.opacity, 0.95, 'opacity should default to 0.95');
+  assert.strictEqual(DEFAULT_SETTINGS.opacity, 1, 'opaque default avoids layered rendering');
 });
 
 suite.test('Fresh SettingsStore instance loads all default window geometry and window settings', () => {
@@ -35,7 +35,17 @@ suite.test('Fresh SettingsStore instance loads all default window geometry and w
   assert.strictEqual(all.focusable, true, 'focusable should default to true');
   assert.strictEqual(all.clickThrough, false, 'clickThrough should default to false');
   assert.strictEqual(all.autoSubmit, false, 'autoSubmit should default to false');
-  assert.strictEqual(all.opacity, 0.95, 'opacity should default to 0.95');
+  assert.strictEqual(all.opacity, 1, 'fresh settings should use full opacity');
+});
+
+suite.test('Saved custom opacity is preserved when defaults change', () => {
+  const savedPath = tempSettingsFile + '.custom';
+  try {
+    fs.writeFileSync(savedPath, JSON.stringify({opacity:.95}));
+    assert.strictEqual(new SettingsStore(savedPath).get('opacity'), .95);
+    fs.writeFileSync(savedPath, JSON.stringify({opacity:.65}));
+    assert.strictEqual(new SettingsStore(savedPath).get('opacity'), .65);
+  } finally { fs.rmSync(savedPath, {force:true}); }
 });
 
 suite.test('Store contains complete prompt instructions', () => {

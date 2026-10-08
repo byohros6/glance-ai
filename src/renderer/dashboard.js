@@ -195,7 +195,7 @@ async function init() {
 
   const w = currentSettings.windowWidth || 520;
   const h = currentSettings.windowHeight || 650;
-  const op = currentSettings.opacity || 0.95;
+  const op = currentSettings.opacity ?? 1;
 
   inputWidth.value = w;
   numWidth.value = w;
