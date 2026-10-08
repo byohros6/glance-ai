@@ -168,7 +168,7 @@ async function init() {
   const inputHeight = document.getElementById('input-height');
   const numHeight = document.getElementById('num-height');
   const inputOpacity = document.getElementById('input-opacity');
-  const valOpacity = document.getElementById('val-display');
+  const valOpacity = document.getElementById('val-opacity');
   const toggleFocusable = document.getElementById('toggle-focusable');
   const toggleClickthrough = document.getElementById('toggle-clickthrough');
   const toggleAutoSubmit = document.getElementById('toggle-autosubmit');

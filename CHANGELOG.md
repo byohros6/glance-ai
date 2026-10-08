@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.11
+
+- Correct the opacity percentage label so it follows saved settings and shortcut changes.
+- Retain the 100% fresh-install default from 1.2.10 and all existing custom opacity choices.
+- Update corrupt-settings recovery regressions for the opaque default. Version 1.2.10 was not published because these assertions still expected 95%.
+
 ## 1.2.10
 
 - Default fresh installations to 100% opacity, avoiding Windows layered-window composition during streaming replies.

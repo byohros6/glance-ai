@@ -24,7 +24,7 @@ suite.test('Corrupted syntax JSON recovery', () => {
 
   const settings = store.getAll();
   assert.strictEqual(settings.windowWidth, 520, 'Should fall back to default windowWidth');
-  assert.strictEqual(settings.opacity, 0.95, 'Should fall back to default opacity');
+  assert.strictEqual(settings.opacity, 1, 'Should fall back to opaque rendering');
   assert.ok(settings.shortcuts && settings.shortcuts.screenshot, 'Should restore default shortcuts');
 });
 
@@ -47,7 +47,7 @@ suite.test('Partial JSON file preserves defaults for missing keys', () => {
   const settings = store.getAll();
   assert.strictEqual(settings.windowWidth, 800, 'Explicit property must be loaded');
   assert.strictEqual(settings.windowHeight, 650, 'Missing windowHeight must default to 650');
-  assert.strictEqual(settings.opacity, 0.95, 'Missing opacity must default to 0.95');
+  assert.strictEqual(settings.opacity, 1, 'Missing opacity must default to 1');
   assert.ok(settings.shortcuts && settings.shortcuts.screenshot, 'Missing shortcuts must be filled');
 });
 

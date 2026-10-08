@@ -119,8 +119,9 @@ suite.test('Dashboard reflects focus and opacity changes made through overlay sh
   shortcuts.get('CommandOrControl+F')();
   shortcuts.get('CommandOrControl+[')();
   main.showDashboard();
-  await until(async () => await dashboard("document.getElementById('toggle-focusable').checked === false && Number(document.getElementById('input-opacity').value) === .9"));
+  await until(async () => await dashboard("document.getElementById('toggle-focusable').checked === false && Number(document.getElementById('input-opacity').value) === .9 && document.getElementById('val-opacity').textContent === '90%'"));
   await dashboard('window.glanceai.saveSettings({focusable:true,opacity:.95})');
+  await until(async () => await dashboard("document.getElementById('val-opacity').textContent === '95%'"));
   main.launchOverlay();
 });
 suite.test('Main IPC rejects unknown windows, subframes and wrong role', async () => {
