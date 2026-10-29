@@ -1,0 +1,9 @@
+{
+  "name": "Chrome host controller prototype",
+  "version": "0.1.0",
+  "status": "prototype",
+  "entryPoint": "ChromeHostController.exe",
+  "runtime": ".NET Framework 4.x WinForms",
+  "build": "build.ps1",
+  "scope": "Launch and control one newly created visible Chrome window using native Windows APIs"
+}
