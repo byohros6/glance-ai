@@ -1,9 +1,9 @@
 {
   "name": "Chrome host controller prototype",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "status": "prototype",
   "entryPoint": "ChromeHostController.exe",
   "runtime": ".NET Framework 4.x WinForms",
   "build": "build.ps1",
-  "scope": "Launch and control one newly created visible Chrome window using native Windows APIs"
+  "scope": "Launch and control one new Chrome app window in a dedicated Glance profile, with a foreground-window-scoped Ctrl+H hide shortcut"
 }

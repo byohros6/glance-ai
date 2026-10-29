@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyVersion("0.1.0.0")]
-[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyVersion("0.1.2.0")]
+[assembly: AssemblyFileVersion("0.1.2.0")]
 [assembly: AssemblyProduct("Glance Chrome host prototype")]
 
 namespace ChromeHostPrototype
@@ -36,10 +36,112 @@ namespace ChromeHostPrototype
         }
     }
 
+    internal static class ChromeLaunchConfiguration
+    {
+        internal const string GeminiUrl = "https://gemini.google.com/app";
+
+        internal static string GetDedicatedProfilePath(string localAppDataPath)
+        {
+            if (string.IsNullOrWhiteSpace(localAppDataPath)) throw new ArgumentException("Local application data path is required.", "localAppDataPath");
+            string localAppData = Path.GetFullPath(localAppDataPath);
+            string dedicated = Path.GetFullPath(Path.Combine(localAppData, "GlanceAI", "BrowserProfile"));
+            string regularChromeProfile = Path.GetFullPath(Path.Combine(localAppData, "Google", "Chrome", "User Data"));
+            if (!Path.IsPathRooted(dedicated) || PathsOverlap(dedicated, regularChromeProfile))
+                throw new InvalidOperationException("The Glance profile must remain separate from the normal Chrome profile.");
+            return dedicated;
+        }
+
+        internal static string BuildArguments(string localAppDataPath)
+        {
+            string profilePath = GetDedicatedProfilePath(localAppDataPath);
+            return "--user-data-dir=\"" + profilePath.Replace("\"", "\\\"") + "\" --app=" + GeminiUrl + " --new-window";
+        }
+
+        internal static bool PathsOverlap(string firstPath, string secondPath)
+        {
+            string first = NormalizePath(firstPath);
+            string second = NormalizePath(secondPath);
+            return string.Equals(first, second, StringComparison.OrdinalIgnoreCase) ||
+                IsChildPath(first, second) || IsChildPath(second, first);
+        }
+
+        private static string NormalizePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("A path is required.", "path");
+            string fullPath = Path.GetFullPath(path);
+            string root = Path.GetPathRoot(fullPath);
+            while (fullPath.Length > root.Length && (fullPath.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
+                fullPath.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)))
+                fullPath = fullPath.Substring(0, fullPath.Length - 1);
+            return fullPath;
+        }
+
+        private static bool IsChildPath(string candidate, string parent)
+        {
+            string prefix = parent.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
+                parent.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? parent : parent + Path.DirectorySeparatorChar;
+            return candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    internal sealed class ChromeProcessIdentity
+    {
+        private readonly int processId;
+        private readonly string processName;
+        private readonly string executablePath;
+        private readonly long startTimeUtcTicks;
+
+        internal ChromeProcessIdentity(int id, string name, string path, long startTicks)
+        {
+            processId = id;
+            processName = name;
+            executablePath = Path.GetFullPath(path);
+            startTimeUtcTicks = startTicks;
+        }
+
+        internal int ProcessId { get { return processId; } }
+
+        internal static ChromeProcessIdentity Capture(Process process)
+        {
+            if (process == null) throw new ArgumentNullException("process");
+            return new ChromeProcessIdentity(process.Id, process.ProcessName,
+                Path.GetFullPath(process.MainModule.FileName), process.StartTime.ToUniversalTime().Ticks);
+        }
+
+        internal bool MatchesIdentity(int id, string name, string path, long startTicks)
+        {
+            return id == processId &&
+                string.Equals(name, processName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Path.GetFullPath(path), executablePath, StringComparison.OrdinalIgnoreCase) &&
+                startTicks == startTimeUtcTicks;
+        }
+
+        internal bool IsCurrentIdentity()
+        {
+            try
+            {
+                using (Process current = Process.GetProcessById(processId))
+                    return MatchesIdentity(current.Id, current.ProcessName,
+                        Path.GetFullPath(current.MainModule.FileName), current.StartTime.ToUniversalTime().Ticks);
+            }
+            catch { return false; }
+        }
+
+        internal bool OwnsWindow(IntPtr hwnd)
+        {
+            if (!Native.IsWindow(hwnd)) return false;
+            uint windowProcessId;
+            Native.GetWindowThreadProcessId(hwnd, out windowProcessId);
+            return windowProcessId == (uint)processId && IsCurrentIdentity();
+        }
+    }
+
     internal sealed class ControllerForm : Form
     {
-        private const string GeminiUrl = "https://gemini.google.com/app";
+        private const string GeminiUrl = ChromeLaunchConfiguration.GeminiUrl;
         private readonly Label status = new Label();
+        private readonly Label profileNotice = new Label();
         private readonly TrackBar opacity = new TrackBar();
         private readonly Label opacityText = new Label();
         private readonly CheckBox topmost = new CheckBox();
@@ -53,16 +155,17 @@ namespace ChromeHostPrototype
         private readonly Button releaseButton = new Button();
         private readonly Button openButton = new Button();
         private WindowLease lease;
+        private ScopedShortcutController shortcutController;
         private bool locating;
         private bool syncingControls;
         private CancellationTokenSource searchCancellation;
 
         internal ControllerForm()
         {
-            Text = "Chrome host prototype 0.1.0";
+            Text = "Chrome host prototype 0.1.2";
             TopMost = true;
-            MinimumSize = new Size(330, 385);
-            Size = new Size(370, 430);
+            MinimumSize = new Size(330, 420);
+            Size = new Size(370, 470);
             StartPosition = FormStartPosition.CenterScreen;
             BuildControls();
             FormClosing += OnFormClosing;
@@ -74,7 +177,7 @@ namespace ChromeHostPrototype
             layout.Dock = DockStyle.Fill;
             layout.Padding = new Padding(12);
             layout.ColumnCount = 2;
-            layout.RowCount = 8;
+            layout.RowCount = 9;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             Controls.Add(layout);
@@ -94,10 +197,18 @@ namespace ChromeHostPrototype
             layout.Controls.Add(status, 0, 1);
             layout.SetColumnSpan(status, 2);
 
+            profileNotice.Text = "Gemini uses a separate Glance Chrome profile. Sign in manually the first time; everyday Chrome data is not shared.";
+            profileNotice.AccessibleName = "Separate Chrome profile and sign-in information";
+            profileNotice.AutoSize = true;
+            profileNotice.Dock = DockStyle.Fill;
+            profileNotice.Padding = new Padding(0, 4, 0, 4);
+            layout.Controls.Add(profileNotice, 0, 2);
+            layout.SetColumnSpan(profileNotice, 2);
+
             opacityText.Text = "Opacity: 100%";
             opacityText.AutoSize = true;
             opacityText.Anchor = AnchorStyles.Left;
-            layout.Controls.Add(opacityText, 0, 2);
+            layout.Controls.Add(opacityText, 0, 3);
             opacity.Minimum = 15;
             opacity.Maximum = 100;
             opacity.Value = 100;
@@ -111,14 +222,14 @@ namespace ChromeHostPrototype
                 opacityText.Text = "Opacity: " + opacity.Value + "%";
                 if (!syncingControls) ApplyOpacity();
             };
-            layout.Controls.Add(opacity, 0, 3);
+            layout.Controls.Add(opacity, 0, 4);
             layout.SetColumnSpan(opacity, 2);
 
             topmost.Text = "Keep Chrome above other windows";
             topmost.AccessibleName = topmost.Text;
             topmost.AutoSize = true;
             topmost.CheckedChanged += delegate { ApplyTopmost(); };
-            layout.Controls.Add(topmost, 0, 4);
+            layout.Controls.Add(topmost, 0, 5);
             layout.SetColumnSpan(topmost, 2);
 
             var arrows = new TableLayoutPanel();
@@ -138,18 +249,18 @@ namespace ChromeHostPrototype
             arrows.Controls.Add(moveLeft, 0, 1);
             arrows.Controls.Add(moveDown, 1, 1);
             arrows.Controls.Add(moveRight, 2, 1);
-            layout.Controls.Add(arrows, 0, 5);
+            layout.Controls.Add(arrows, 0, 6);
             layout.SetColumnSpan(arrows, 2);
 
             ConfigureButton(hideButton, "Hide", "Hide Chrome window", delegate { SetVisibility(false); });
             ConfigureButton(showButton, "Show", "Show Chrome window", delegate { SetVisibility(true); });
-            layout.Controls.Add(hideButton, 0, 6);
-            layout.Controls.Add(showButton, 1, 6);
+            layout.Controls.Add(hideButton, 0, 7);
+            layout.Controls.Add(showButton, 1, 7);
 
             ConfigureButton(restoreButton, "Restore", "Restore Chrome window settings", RestoreTarget);
             ConfigureButton(releaseButton, "Release", "Release Chrome window control", ReleaseTarget);
-            layout.Controls.Add(restoreButton, 0, 7);
-            layout.Controls.Add(releaseButton, 1, 7);
+            layout.Controls.Add(restoreButton, 0, 8);
+            layout.Controls.Add(releaseButton, 1, 8);
             SetControlsEnabled(false);
         }
 
@@ -169,30 +280,55 @@ namespace ChromeHostPrototype
             searchCancellation = new CancellationTokenSource();
             CancellationToken token = searchCancellation.Token;
             openButton.Enabled = false;
-            SetStatus("Starting Chrome and looking for its new window…");
+            SetStatus("Opening Gemini in a separate Glance profile. Sign in manually if prompted.");
             try
             {
                 string chrome = FindChromeExecutable();
                 if (chrome == null)
                     throw new InvalidOperationException("Chrome was not found in standard install locations.");
 
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string profileDirectory = ChromeLaunchConfiguration.GetDedicatedProfilePath(localAppData);
+                Directory.CreateDirectory(profileDirectory);
+
                 HashSet<IntPtr> before = EnumerateChromeWindows();
-                Process.Start(new ProcessStartInfo
+                Process launchedProcess = Process.Start(new ProcessStartInfo
                 {
                     FileName = chrome,
-                    Arguments = "--app=" + GeminiUrl + " --new-window",
+                    Arguments = ChromeLaunchConfiguration.BuildArguments(localAppData),
                     UseShellExecute = false,
                     WorkingDirectory = Path.GetDirectoryName(chrome)
                 });
+                if (launchedProcess == null)
+                    throw new InvalidOperationException("Windows did not return the Chrome launch process; no browser window was attached.");
+                ChromeProcessIdentity launchedIdentity = null;
+                try { using (launchedProcess) launchedIdentity = ChromeProcessIdentity.Capture(launchedProcess); }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Chrome's launch process exited before it could be verified. It may have forwarded the request to an existing Chrome process. No window was attached.", ex);
+                }
 
-                IntPtr found = await Task.Run(delegate { return WaitForNewChromeWindow(before, chrome, 15000, token); });
+                IntPtr found = await Task.Run(delegate { return WaitForNewChromeWindow(before, launchedIdentity, 15000, token); });
                 if (token.IsCancellationRequested || IsDisposed || Disposing) return;
                 if (found == IntPtr.Zero)
-                    throw new InvalidOperationException("No unique new visible Chrome window appeared within 15 seconds.");
-                lease = new WindowLease(found);
+                {
+                    if (!launchedIdentity.IsCurrentIdentity())
+                        throw new InvalidOperationException("Chrome's launch process exited before its window could be verified. It may have forwarded the request to an existing Chrome process. To avoid attaching an unrelated Chrome window, nothing was attached. Close the Glance Chrome window and retry.");
+                    throw new InvalidOperationException("No new visible Chrome window owned by the launched Chrome process appeared within 15 seconds.");
+                }
+                if (!launchedIdentity.IsCurrentIdentity())
+                    throw new InvalidOperationException("Chrome's launch process exited before attachment. To avoid attaching an unrelated Chrome window, nothing was attached.");
+                WindowLease foundLease = new WindowLease(found, launchedIdentity);
+                ScopedShortcutController foundShortcutController = new ScopedShortcutController(
+                    foundLease,
+                    delegate { SetVisibilityFromShortcut(); },
+                    QueueShortcutAction,
+                    delegate { OnShortcutTargetLost(foundLease); });
+                lease = foundLease;
+                shortcutController = foundShortcutController;
                 ApplyLeaseStateToControls();
                 SetControlsEnabled(true);
-                SetStatus("Attached to one new Chrome window. Changes restore when you release it.");
+                SetStatus("Attached. Sign in manually if Gemini asks. Ctrl+H hides this window; use Show to bring it back.");
             }
             catch (Exception ex)
             {
@@ -252,7 +388,7 @@ namespace ChromeHostPrototype
             return result;
         }
 
-        private static IntPtr WaitForNewChromeWindow(HashSet<IntPtr> before, string expectedChromePath, int timeoutMs, CancellationToken token)
+        private static IntPtr WaitForNewChromeWindow(HashSet<IntPtr> before, ChromeProcessIdentity expectedProcess, int timeoutMs, CancellationToken token)
         {
             Stopwatch timer = Stopwatch.StartNew();
             IntPtr stableCandidate = IntPtr.Zero;
@@ -260,21 +396,13 @@ namespace ChromeHostPrototype
             while (timer.ElapsedMilliseconds < timeoutMs)
             {
                 if (token.IsCancellationRequested) return IntPtr.Zero;
+                if (!expectedProcess.IsCurrentIdentity()) return IntPtr.Zero;
                 List<IntPtr> candidates = new List<IntPtr>();
                 Native.EnumWindows(delegate(IntPtr hwnd, IntPtr lParam)
                 {
                     if (before.Contains(hwnd) || Native.GetWindow(hwnd, Native.GW_OWNER) != IntPtr.Zero ||
                         !Native.IsWindowVisible(hwnd) || Native.GetClassName(hwnd) != "Chrome_WidgetWin_1") return true;
-                    uint pid;
-                    Native.GetWindowThreadProcessId(hwnd, out pid);
-                    try
-                    {
-                        using (Process process = Process.GetProcessById((int)pid))
-                            if (string.Equals(process.ProcessName, "chrome", StringComparison.OrdinalIgnoreCase) &&
-                                string.Equals(Path.GetFullPath(process.MainModule.FileName), expectedChromePath, StringComparison.OrdinalIgnoreCase))
-                                candidates.Add(hwnd);
-                    }
-                    catch { }
+                    if (expectedProcess.OwnsWindow(hwnd)) candidates.Add(hwnd);
                     return true;
                 }, IntPtr.Zero);
 
@@ -337,11 +465,46 @@ namespace ChromeHostPrototype
             catch (Exception ex) { SetStatus(ex.Message); }
         }
 
+        private void SetVisibilityFromShortcut()
+        {
+            if (lease == null || !lease.Validate())
+            {
+                ReleaseShortcutController();
+                return;
+            }
+            try { lease.SetVisible(false); SetStatus("Chrome hidden. Use Show to bring it back."); }
+            catch (Exception ex) { SetStatus(ex.Message); }
+        }
+
+        private void QueueShortcutAction(Action action)
+        {
+            if (IsDisposed || Disposing || !IsHandleCreated) return;
+            try { BeginInvoke(action); }
+            catch (InvalidOperationException) { }
+        }
+
+        private void OnShortcutTargetLost(WindowLease lostLease)
+        {
+            if (!object.ReferenceEquals(lease, lostLease)) return;
+            ReleaseShortcutController();
+            lease = null;
+            SetControlsEnabled(false);
+            SetStatus("The attached Chrome window closed or changed. Control was released.");
+        }
+
+        private void ReleaseShortcutController()
+        {
+            if (shortcutController == null) return;
+            shortcutController.Dispose();
+            shortcutController = null;
+        }
+
         private bool TryValidate()
         {
             if (lease == null) { SetStatus("Open Gemini before changing a Chrome window."); return false; }
             if (!lease.Validate())
             {
+                ReleaseShortcutController();
                 lease = null;
                 SetControlsEnabled(false);
                 SetStatus("The attached Chrome window closed or changed. Control was released.");
@@ -353,7 +516,7 @@ namespace ChromeHostPrototype
         private void RestoreTarget()
         {
             if (lease == null) return;
-            if (!lease.Validate()) { lease = null; SetControlsEnabled(false); SetStatus("The Chrome window closed. Control was released."); return; }
+            if (!lease.Validate()) { ReleaseShortcutController(); lease = null; SetControlsEnabled(false); SetStatus("The Chrome window closed. Control was released."); return; }
             try { lease.Restore(); ApplyLeaseStateToControls(); SetStatus("Restored the Chrome window’s original settings."); }
             catch (Exception ex) { SetStatus(ex.Message); }
         }
@@ -361,8 +524,8 @@ namespace ChromeHostPrototype
         private void ReleaseTarget()
         {
             if (lease == null) return;
-            if (!lease.Validate()) { lease = null; SetControlsEnabled(false); SetStatus("The Chrome window closed. Control was released."); return; }
-            try { lease.Restore(); lease = null; SetControlsEnabled(false); SetStatus("Restored and released the Chrome window."); }
+            if (!lease.Validate()) { ReleaseShortcutController(); lease = null; SetControlsEnabled(false); SetStatus("The Chrome window closed. Control was released."); return; }
+            try { lease.Restore(); ReleaseShortcutController(); lease = null; SetControlsEnabled(false); SetStatus("Restored and released the Chrome window."); }
             catch (Exception ex) { SetStatus(ex.Message); }
         }
 
@@ -371,7 +534,7 @@ namespace ChromeHostPrototype
             if (searchCancellation != null) searchCancellation.Cancel();
             if (lease != null)
             {
-                if (!lease.Validate()) { lease = null; return; }
+                if (!lease.Validate()) { ReleaseShortcutController(); lease = null; return; }
                 try { lease.Restore(); }
                 catch (Exception ex)
                 {
@@ -379,6 +542,7 @@ namespace ChromeHostPrototype
                     e.Cancel = true;
                 }
             }
+            if (!e.Cancel) ReleaseShortcutController();
         }
 
         private void SetControlsEnabled(bool enabled)
@@ -412,17 +576,24 @@ namespace ChromeHostPrototype
         private readonly Rectangle bounds;
         private readonly bool wasVisible;
         private readonly bool wasTopmost;
+        internal IntPtr Handle { get { return hwnd; } }
         internal int? OriginalOpacity { get; private set; }
         internal bool OriginalTopmost { get { return wasTopmost; } }
 
-        internal WindowLease(IntPtr target) : this(target, false) { }
+        internal WindowLease(IntPtr target) : this(target, false, null) { }
 
-        internal WindowLease(IntPtr target, bool allowTestWindow)
+        internal WindowLease(IntPtr target, ChromeProcessIdentity expectedProcess) : this(target, false, expectedProcess) { }
+
+        internal WindowLease(IntPtr target, bool allowTestWindow) : this(target, allowTestWindow, null) { }
+
+        private WindowLease(IntPtr target, bool allowTestWindow, ChromeProcessIdentity expectedProcess)
         {
             hwnd = target;
             windowClass = Native.GetClassName(hwnd);
             if (!Native.IsWindow(hwnd) || (!allowTestWindow && windowClass != "Chrome_WidgetWin_1"))
                 throw new InvalidOperationException("The candidate is not an eligible window.");
+            if (!allowTestWindow && expectedProcess == null)
+                throw new InvalidOperationException("A verified Chrome process identity is required for attachment.");
             uint processId;
             Native.GetWindowThreadProcessId(hwnd, out processId);
             pid = (int)processId;
@@ -434,6 +605,9 @@ namespace ChromeHostPrototype
                 processPath = Path.GetFullPath(process.MainModule.FileName);
                 processStartTicks = process.StartTime.ToUniversalTime().Ticks;
             }
+            if (expectedProcess != null &&
+                !expectedProcess.MatchesIdentity(pid, processName, processPath, processStartTicks))
+                throw new InvalidOperationException("The window is not owned by the verified Chrome process that was launched.");
             originalExStyle = Native.GetWindowLongPtr(hwnd, Native.GWL_EXSTYLE).ToInt64();
             originallyLayered = (originalExStyle & Native.WS_EX_LAYERED) != 0;
             wasTopmost = (originalExStyle & Native.WS_EX_TOPMOST) != 0;
@@ -576,6 +750,131 @@ namespace ChromeHostPrototype
         }
     }
 
+    internal sealed class ScopedShortcutController : IDisposable
+    {
+        private readonly WindowLease lease;
+        private readonly Action hideTarget;
+        private readonly Action<Action> queueHideTarget;
+        private readonly Action targetLost;
+        private readonly Native.LowLevelKeyboardProc keyboardCallback;
+        private readonly Native.WinEventProc eventCallback;
+        private readonly ScopedShortcutState shortcutState = new ScopedShortcutState();
+        private IntPtr keyboardHook;
+        private IntPtr destroyHook;
+        private bool disposed;
+
+        internal ScopedShortcutController(WindowLease targetLease, Action hide, Action<Action> queueHide, Action lost)
+        {
+            if (targetLease == null) throw new ArgumentNullException("targetLease");
+            if (hide == null) throw new ArgumentNullException("hide");
+            if (queueHide == null) throw new ArgumentNullException("queueHide");
+            if (lost == null) throw new ArgumentNullException("lost");
+            lease = targetLease;
+            hideTarget = hide;
+            queueHideTarget = queueHide;
+            targetLost = lost;
+            keyboardCallback = OnKeyboard;
+            eventCallback = OnWinEvent;
+            keyboardHook = Native.SetWindowsHookEx(Native.WH_KEYBOARD_LL, keyboardCallback, IntPtr.Zero, 0);
+            if (keyboardHook == IntPtr.Zero)
+                throw new InvalidOperationException("Windows could not install the scoped Ctrl+H shortcut hook.");
+            destroyHook = Native.SetWinEventHook(Native.EVENT_OBJECT_DESTROY, Native.EVENT_OBJECT_DESTROY,
+                IntPtr.Zero, eventCallback, 0, 0, Native.WINEVENT_OUTOFCONTEXT);
+            if (destroyHook == IntPtr.Zero)
+            {
+                Dispose();
+                throw new InvalidOperationException("Windows could not monitor the attached window lifetime.");
+            }
+        }
+
+        internal bool IsInstalled { get { return keyboardHook != IntPtr.Zero && destroyHook != IntPtr.Zero && !disposed; } }
+
+        private IntPtr OnKeyboard(int code, IntPtr wParam, IntPtr lParam)
+        {
+            try
+            {
+                if (code < 0 || disposed) return Native.CallNextHookEx(keyboardHook, code, wParam, lParam);
+                int message = wParam.ToInt32();
+                bool keyDown = message == Native.WM_KEYDOWN || message == Native.WM_SYSKEYDOWN;
+                bool keyUp = message == Native.WM_KEYUP || message == Native.WM_SYSKEYUP;
+                if (!keyDown && !keyUp) return Native.CallNextHookEx(keyboardHook, code, wParam, lParam);
+
+                Native.KBDLLHOOKSTRUCT key = (Native.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Native.KBDLLHOOKSTRUCT));
+                if (key.vkCode != Native.VK_H) return Native.CallNextHookEx(keyboardHook, code, wParam, lParam);
+
+                bool targetForeground = keyDown && Native.GetForegroundWindow() == lease.Handle;
+                bool controlDown = keyDown && (Native.GetAsyncKeyState(Native.VK_CONTROL) & 0x8000) != 0;
+                bool otherModifierDown = keyDown && (
+                    (Native.GetAsyncKeyState(Native.VK_MENU) & 0x8000) != 0 ||
+                    (Native.GetAsyncKeyState(Native.VK_SHIFT) & 0x8000) != 0 ||
+                    (Native.GetAsyncKeyState(Native.VK_LWIN) & 0x8000) != 0 ||
+                    (Native.GetAsyncKeyState(Native.VK_RWIN) & 0x8000) != 0);
+                bool queueHide;
+                bool suppress = shortcutState.Process(keyDown, controlDown, otherModifierDown, targetForeground, out queueHide);
+                if (queueHide)
+                {
+                    try
+                    {
+                        queueHideTarget(delegate
+                        {
+                            try
+                            {
+                                if (disposed) return;
+                                if (Native.GetForegroundWindow() != lease.Handle) return;
+                                if (!lease.Validate()) { Dispose(); targetLost(); return; }
+                                hideTarget();
+                            }
+                            catch { }
+                        });
+                    }
+                    catch { }
+                }
+                return suppress ? new IntPtr(1) : Native.CallNextHookEx(keyboardHook, code, wParam, lParam);
+            }
+            catch { return Native.CallNextHookEx(keyboardHook, code, wParam, lParam); }
+        }
+
+        private void OnWinEvent(IntPtr hook, uint eventType, IntPtr hwnd, int objectId, int childId, uint eventThread, uint eventTime)
+        {
+            try
+            {
+                if (disposed || eventType != Native.EVENT_OBJECT_DESTROY || hwnd != lease.Handle || objectId != 0 || childId != 0) return;
+                Dispose();
+                targetLost();
+            }
+            catch { }
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            if (keyboardHook != IntPtr.Zero) { Native.UnhookWindowsHookEx(keyboardHook); keyboardHook = IntPtr.Zero; }
+            if (destroyHook != IntPtr.Zero) { Native.UnhookWinEvent(destroyHook); destroyHook = IntPtr.Zero; }
+        }
+    }
+
+    internal sealed class ScopedShortcutState
+    {
+        private bool suppressUntilKeyUp;
+
+        internal bool Process(bool keyDown, bool controlDown, bool otherModifierDown, bool targetForeground, out bool queueHide)
+        {
+            queueHide = false;
+            if (!keyDown)
+            {
+                if (!suppressUntilKeyUp) return false;
+                suppressUntilKeyUp = false;
+                return true;
+            }
+            if (suppressUntilKeyUp) return true;
+            if (!controlDown || otherModifierDown || !targetForeground) return false;
+            suppressUntilKeyUp = true;
+            queueHide = true;
+            return true;
+        }
+    }
+
     internal static class SelfTest
     {
         internal static int Run(string reportPath)
@@ -655,10 +954,13 @@ namespace ChromeHostPrototype
                 finally { layeredDummy.Close(); layeredDummy.Dispose(); }
             }
             catch (Exception ex) { results.Add("FAIL: " + ex.Message); }
-            bool passed = results.Count == 6;
+            RunScopedShortcutTests(results);
+            RunLaunchConfigurationTests(results);
+            RunProcessIdentityTests(results);
+            bool passed = results.Count == 11;
             foreach (string result in results)
                 if (result.StartsWith("FAIL:", StringComparison.Ordinal)) passed = false;
-            string output = "Chrome host prototype self-test 0.1.0\r\n" + string.Join("\r\n", results.ToArray()) + "\r\n" + (passed ? "RESULT: PASS" : "RESULT: FAIL") + "\r\n";
+            string output = "Chrome host prototype self-test 0.1.2\r\n" + string.Join("\r\n", results.ToArray()) + "\r\n" + (passed ? "RESULT: PASS" : "RESULT: FAIL") + "\r\n";
             if (!string.IsNullOrEmpty(reportPath)) File.WriteAllText(reportPath, output, new UTF8Encoding(false));
             Console.Write(output);
             return passed ? 0 : 1;
@@ -671,6 +973,82 @@ namespace ChromeHostPrototype
             internal WindowLease CreateLease() { return new WindowLease(form.Handle, true); }
         }
 
+        private static void RunScopedShortcutTests(List<string> results)
+        {
+            Form dummy = new Form();
+            dummy.Text = "Chrome host scoped-shortcut self-test dummy";
+            dummy.StartPosition = FormStartPosition.Manual;
+            dummy.Location = new Point(220, 220);
+            dummy.Size = new Size(320, 200);
+            dummy.Show();
+            Application.DoEvents();
+            ScopedShortcutController shortcuts = null;
+            ScopedShortcutController lostShortcuts = null;
+            Form lostDummy = null;
+            WindowLease lease = null;
+            try
+            {
+                lease = new WindowLeaseForTest(dummy).CreateLease();
+                ScopedShortcutState state = new ScopedShortcutState();
+                bool queueHide;
+                int hideCount = 0;
+                bool targetShortcut = state.Process(true, true, false, true, out queueHide);
+                if (targetShortcut && queueHide) hideCount++;
+                bool heldRepeatAfterFocusChange = state.Process(true, true, false, false, out queueHide);
+                if (queueHide) hideCount++;
+                bool matchingKeyUp = state.Process(false, false, false, false, out queueHide);
+                bool unrelatedChord = state.Process(true, true, false, false, out queueHide);
+                bool modifiedChord = state.Process(true, true, true, true, out queueHide);
+                bool missingControl = state.Process(true, false, false, true, out queueHide);
+                if (!targetShortcut || !heldRepeatAfterFocusChange || !matchingKeyUp || unrelatedChord || modifiedChord || missingControl || hideCount != 1)
+                    throw new InvalidOperationException("Scoped shortcut decision test failed.");
+                results.Add("Ctrl+H state handles target chord, repeats, keyup, and modifiers: PASS");
+
+                shortcuts = new ScopedShortcutController(lease, delegate { lease.SetVisible(false); }, delegate(Action action) { action(); }, delegate { });
+                if (!shortcuts.IsInstalled) throw new InvalidOperationException("Scoped hooks did not install.");
+                shortcuts.Dispose();
+                if (shortcuts.IsInstalled) throw new InvalidOperationException("Scoped hooks remained installed after disposal.");
+                lostDummy = new Form();
+                lostDummy.Text = "Chrome host target-loss self-test dummy";
+                lostDummy.Show();
+                Application.DoEvents();
+                WindowLease lostLease = new WindowLeaseForTest(lostDummy).CreateLease();
+                bool targetLost = false;
+                lostShortcuts = new ScopedShortcutController(lostLease, delegate { }, delegate(Action action) { action(); }, delegate { targetLost = true; });
+                lostDummy.Close();
+                Stopwatch lossWait = Stopwatch.StartNew();
+                while (!targetLost && lossWait.ElapsedMilliseconds < 1000)
+                {
+                    Application.DoEvents();
+                    Thread.Sleep(10);
+                }
+                bool lostHooksReleased = targetLost && !lostShortcuts.IsInstalled;
+                lostShortcuts.Dispose();
+                lostShortcuts = null;
+                lostDummy.Dispose();
+                lostDummy = null;
+                if (!lostHooksReleased) throw new InvalidOperationException("Target destruction did not release the scoped hooks.");
+                results.Add("keyboard and target-lifetime hooks install and clean up: PASS");
+
+                lease.SetVisible(false);
+                if (Native.IsWindowVisible(dummy.Handle)) throw new InvalidOperationException("Dummy hide failed.");
+                lease.SetVisible(true);
+                if (!Native.IsWindowVisible(dummy.Handle)) throw new InvalidOperationException("Dummy Show recovery failed.");
+                lease.Restore();
+                if (!Native.IsWindowVisible(dummy.Handle)) throw new InvalidOperationException("Dummy restore failed.");
+                results.Add("hidden target recovers through Show and restores: PASS");
+            }
+            catch (Exception ex) { results.Add("FAIL: scoped shortcut self-test: " + ex.Message); }
+            finally
+            {
+                if (shortcuts != null) shortcuts.Dispose();
+                if (lostShortcuts != null) lostShortcuts.Dispose();
+                if (lostDummy != null) { lostDummy.Close(); lostDummy.Dispose(); }
+                dummy.Close();
+                dummy.Dispose();
+            }
+        }
+
         private static void AssertAlpha(IntPtr hwnd, byte expected)
         {
             byte actual; uint colorKey, flags;
@@ -678,10 +1056,59 @@ namespace ChromeHostPrototype
                 actual != expected || (flags & Native.LWA_ALPHA) == 0)
                 throw new InvalidOperationException("Expected native alpha " + expected + ", received " + actual + ".");
         }
+
+        private static void RunLaunchConfigurationTests(List<string> results)
+        {
+            try
+            {
+                string localAppData = Path.Combine(Path.GetTempPath(), "Glance Profile Test");
+                string dedicated = ChromeLaunchConfiguration.GetDedicatedProfilePath(localAppData);
+                string regular = Path.Combine(Path.GetFullPath(localAppData), "Google", "Chrome", "User Data");
+                string expectedArguments = "--user-data-dir=\"" + dedicated + "\" --app=" + ChromeLaunchConfiguration.GeminiUrl + " --new-window";
+                if (!Path.IsPathRooted(dedicated) ||
+                    !string.Equals(dedicated, Path.GetFullPath(Path.Combine(localAppData, "GlanceAI", "BrowserProfile")), StringComparison.OrdinalIgnoreCase) ||
+                    ChromeLaunchConfiguration.PathsOverlap(dedicated, regular) ||
+                    !string.Equals(ChromeLaunchConfiguration.BuildArguments(localAppData), expectedArguments, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Dedicated profile path or Chrome argument validation failed.");
+                results.Add("dedicated profile path and three Chrome launch switches: PASS");
+            }
+            catch (Exception ex) { results.Add("FAIL: launch configuration self-test: " + ex.Message); }
+        }
+
+        private static void RunProcessIdentityTests(List<string> results)
+        {
+            try
+            {
+                string chromePath = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+                ChromeProcessIdentity launched = new ChromeProcessIdentity(4321, "chrome", chromePath, 638972000000000000L);
+                bool exactMatch = launched.MatchesIdentity(4321, "chrome", chromePath, 638972000000000000L);
+                bool differentChromePid = launched.MatchesIdentity(9876, "chrome", chromePath, 638972000000000000L);
+                bool reusedPid = launched.MatchesIdentity(4321, "chrome", chromePath, 638972000000000001L);
+                bool differentExecutable = launched.MatchesIdentity(4321, "chrome", @"C:\Other\chrome.exe", 638972000000000000L);
+                ChromeProcessIdentity exited = new ChromeProcessIdentity(int.MaxValue, "chrome", chromePath, 638972000000000000L);
+                if (!exactMatch || differentChromePid || reusedPid || differentExecutable || exited.IsCurrentIdentity())
+                    throw new InvalidOperationException("Chrome process ownership fixture test failed.");
+                results.Add("window ownership rejects other Chrome PID, PID reuse, and exited process: PASS");
+            }
+            catch (Exception ex) { results.Add("FAIL: process identity self-test: " + ex.Message); }
+        }
     }
 
     internal static class Native
     {
+        internal const int WH_KEYBOARD_LL = 13;
+        internal const int VK_H = 0x48;
+        internal const int VK_CONTROL = 0x11;
+        internal const int VK_SHIFT = 0x10;
+        internal const int VK_MENU = 0x12;
+        internal const int VK_LWIN = 0x5B;
+        internal const int VK_RWIN = 0x5C;
+        internal const int WM_KEYDOWN = 0x0100;
+        internal const int WM_KEYUP = 0x0101;
+        internal const int WM_SYSKEYDOWN = 0x0104;
+        internal const int WM_SYSKEYUP = 0x0105;
+        internal const uint EVENT_OBJECT_DESTROY = 0x8001;
+        internal const uint WINEVENT_OUTOFCONTEXT = 0x0000;
         internal const int GWL_EXSTYLE = -20;
         internal const long WS_EX_TOPMOST = 0x00000008L;
         internal const long WS_EX_LAYERED = 0x00080000L;
@@ -708,6 +1135,16 @@ namespace ChromeHostPrototype
         }
 
         internal delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+        internal delegate IntPtr LowLevelKeyboardProc(int code, IntPtr wParam, IntPtr lParam);
+        internal delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr hwnd, int objectId, int childId, uint eventThread, uint eventTime);
+        [StructLayout(LayoutKind.Sequential)] internal struct KBDLLHOOKSTRUCT { internal uint vkCode, scanCode, flags, time; internal IntPtr extraInfo; }
+        [DllImport("user32.dll", SetLastError = true)] internal static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr module, uint threadId);
+        [DllImport("user32.dll", SetLastError = true)] internal static extern bool UnhookWindowsHookEx(IntPtr hook);
+        [DllImport("user32.dll")] internal static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
+        [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
+        [DllImport("user32.dll")] internal static extern short GetAsyncKeyState(int virtualKey);
+        [DllImport("user32.dll", SetLastError = true)] internal static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module, WinEventProc callback, uint processId, uint threadId, uint flags);
+        [DllImport("user32.dll", SetLastError = true)] internal static extern bool UnhookWinEvent(IntPtr hook);
         [DllImport("user32.dll", SetLastError = true)] internal static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
         [DllImport("user32.dll")] internal static extern bool IsWindow(IntPtr hwnd);
         [DllImport("user32.dll")] internal static extern bool IsWindowVisible(IntPtr hwnd);
