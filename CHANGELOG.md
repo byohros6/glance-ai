@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.12
+
+- Fix Gemini replies stalling for one to two minutes when signed in.
+- Present a standard Chrome browser identity to Gemini pages; the sign-in flow keeps its existing behavior.
+- Other providers are unchanged.
+
 ## 1.2.11
 
 - Correct the opacity percentage label so it follows saved settings and shortcut changes.

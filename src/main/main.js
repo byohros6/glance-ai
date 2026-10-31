@@ -8,7 +8,8 @@ import { OperationCoordinator } from './operations.js';
 import { createPermissionPolicy } from './permissions.js';
 import { disableWindowTransitions } from './window-effects.js';
 import { createUpdateChecker, RELEASES_URL } from './updates.js';
-import { PROVIDER_URLS, isAllowedWebURL, isExternalURL, isTrustedSender, requireBoolean } from './security.js';
+import { buildChromeUserAgent, createIdentityHeaderRewriter, createDebuggerIdentity } from './chrome-identity.js';
+import { PROVIDER_URLS, isAuthHost, isAllowedWebURL, isExternalURL, isTrustedSender, requireBoolean } from './security.js';
 import { applyWindowState, restoreWindow, hideWindow, visibleBounds } from './window-state.js';
 export { PROVIDER_URLS };
 
@@ -33,6 +34,29 @@ export function isGoogleDomain(url = '') {
 
 export function getUserAgentForURL(url = '') {
   return isGoogleDomain(url) ? GOOGLE_USER_AGENT : STANDARD_USER_AGENT;
+}
+
+// Gemini-only Chrome identity. Auth hosts and popups keep the Safari identity above.
+const chromeVersion = process.versions.chrome;
+const CHROME_USER_AGENT = buildChromeUserAgent(chromeVersion);
+const rewriteChromeHeaders = createIdentityHeaderRewriter(chromeVersion);
+const debuggerIdentity = createDebuggerIdentity(chromeVersion);
+let geminiContentsId = null;
+let geminiPageCommitted = false; // overlay main frame has committed a document on gemini.google.com
+const isGeminiHost = url => { try { return new URL(url).hostname === 'gemini.google.com'; } catch { return false; } };
+const usesChromeIdentity = isGeminiHost;
+// Updates identity for the overlay webContents; resolves once the debugger override is ready (or skipped).
+function applyOverlayIdentity(contents, provider, url) {
+  if (contents.isDestroyed()) return Promise.resolve();
+  if (provider !== 'gemini') {
+    geminiContentsId = null; geminiPageCommitted = false; debuggerIdentity.detach();
+    contents.setUserAgent(getUserAgentForURL(url));
+    return Promise.resolve();
+  }
+  geminiContentsId = contents.id;
+  if (!usesChromeIdentity(url)) { geminiPageCommitted = false; debuggerIdentity.detach(); contents.setUserAgent(getUserAgentForURL(url)); return Promise.resolve(); }
+  contents.setUserAgent(CHROME_USER_AGENT);
+  return debuggerIdentity.attach(contents).then(() => {});
 }
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
@@ -136,10 +160,11 @@ function openExternal(url) {
 }
 function secureWebContents(contents, local = false) {
   const allowed = url => local ? url === dashboardURL : isAllowedWebURL(url, true);
+  const logBlocked = url => { if (local) return; try { console.log('navigation-blocked host=' + new URL(url).hostname); } catch { console.log('navigation-blocked host='); } };
   contents.on('will-navigate', (event, url) => {
-    if (!allowed(url)) { event.preventDefault(); openExternal(url); }
+    if (!allowed(url)) { logBlocked(url); event.preventDefault(); openExternal(url); }
   });
-  contents.on('will-redirect', (event, url) => { if (!allowed(url)) event.preventDefault(); });
+  contents.on('will-redirect', (event, url) => { if (!allowed(url)) { logBlocked(url); event.preventDefault(); } });
   contents.on('will-attach-webview', event => event.preventDefault());
   contents.setWindowOpenHandler(({ url }) => {
     if (!local && isAllowedWebURL(url, true)) return { action: 'allow', overrideBrowserWindowOptions: {
@@ -174,12 +199,18 @@ function createOverlay() {
   secureWebContents(win.webContents);
   const initialUA = getUserAgentForURL(PROVIDER_URLS[settings.provider] || '');
   win.webContents.setUserAgent(initialUA);
+  const contentsId = win.webContents.id;
+  win.on('closed', () => { debuggerIdentity.detach(); if (geminiContentsId === contentsId) geminiContentsId = null; });
   for (const event of ['resize', 'move']) win.on(event, () => { if (!win.isDestroyed()) store.setBounds(win.getBounds()); });
   win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
   win.on('closed', () => { operations.cancel(win); overlayWindow = null; loadedProvider = null; });
+  win.webContents.on('did-navigate', (_event, url) => { if (geminiContentsId === win.webContents.id) geminiPageCommitted = isGeminiHost(url); });
   win.webContents.on('did-start-navigation', (_event, url, inPlace, mainFrame) => {
     if (mainFrame) {
-      win.webContents.setUserAgent(getUserAgentForURL(url));
+      if (geminiContentsId === win.webContents.id) {
+        if (url.startsWith('https:')) { if (!isGeminiHost(url)) geminiPageCommitted = false; void applyOverlayIdentity(win.webContents, 'gemini', url); }
+      }
+      else win.webContents.setUserAgent(getUserAgentForURL(url));
     }
     if (mainFrame && !inPlace) operations.cancel(win);
   });
@@ -215,9 +246,15 @@ export function launchGeminiOverlay() {
   if (loadedProvider !== settings.provider) {
     operations.cancel(win);
     loadedProvider = settings.provider;
-    const targetUA = getUserAgentForURL(PROVIDER_URLS[settings.provider] || '');
-    win.webContents.setUserAgent(targetUA);
-    win.loadURL(PROVIDER_URLS[settings.provider], { userAgent: targetUA }).catch(error => {
+    const targetURL = PROVIDER_URLS[settings.provider] || '';
+    const targetUA = settings.provider === 'gemini' && usesChromeIdentity(targetURL) ? CHROME_USER_AGENT : getUserAgentForURL(targetURL);
+    // The debugger override must be in place before the Gemini page starts loading.
+    // A webContents with no committed page cannot answer CDP commands, so commit about:blank first (as the harness does).
+    const ready = settings.provider === 'gemini' && !win.webContents.getURL() ? win.loadURL('about:blank') : Promise.resolve();
+    ready.then(() => applyOverlayIdentity(win.webContents, settings.provider, targetURL)).then(() => {
+      if (win.isDestroyed() || loadedProvider !== settings.provider) return;
+      return win.loadURL(PROVIDER_URLS[settings.provider], { userAgent: targetUA });
+    }).catch(error => {
       if (!win.isDestroyed() && error.code !== 'ERR_ABORTED') { loadedProvider = null; showDashboard(); notify('Unable to load the AI page. Check your connection and try again.'); }
     });
   } else win.webContents.send('action:settings-changed', settings);
@@ -294,7 +331,11 @@ handle('preview-overlay-size', ['dashboard'], ({ width, height } = {}) => {
 
 app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    if (isGoogleDomain(details.url)) {
+    const geminiRequest = geminiContentsId !== null && details.webContentsId === geminiContentsId;
+    const chromeIdentityRequest = geminiRequest && (details.resourceType === 'mainFrame' ? isGeminiHost(details.url) : geminiPageCommitted && isGoogleDomain(details.url));
+    if (chromeIdentityRequest) {
+      rewriteChromeHeaders(details.requestHeaders);
+    } else if (isGoogleDomain(details.url)) {
       details.requestHeaders['User-Agent'] = GOOGLE_USER_AGENT;
       delete details.requestHeaders['sec-ch-ua'];
       delete details.requestHeaders['sec-ch-ua-mobile'];

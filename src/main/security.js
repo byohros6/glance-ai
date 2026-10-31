@@ -13,6 +13,10 @@ const authHosts = new Set([
   'appleid.apple.com', 'login.microsoftonline.com', 'login.live.com'
 ]);
 
+export function isAuthHost(value) {
+  try { return authHosts.has(new URL(value).hostname); } catch { return false; }
+}
+
 export function isAllowedWebURL(value, includeAuth = false) {
   try {
     const url = new URL(value);
