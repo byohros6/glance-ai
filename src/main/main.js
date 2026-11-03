@@ -97,10 +97,18 @@ function notify(message) {
   const win = currentWindow();
   if (win && !win.isDestroyed()) win.webContents.send('action:show-toast', { message });
 }
+// The overlay is non-resizable so frameless bounds-rounding and edge clamps cannot
+// grow it. The settings slider is the only way to resize, so briefly allow it here.
+function sizeOverlay(win, settings) {
+  if (!win || win.isDestroyed()) return;
+  const target = visibleBounds({ ...win.getBounds(), width: settings.windowWidth, height: settings.windowHeight });
+  win.setBounds(target);
+  store.setBounds({ x: target.x, y: target.y });
+}
 function settingsChanged() {
   if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.webContents.send('action:settings-changed', store.getAll());
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    if (!operations.active) applyWindowState(overlayWindow, store.getAll());
+    if (!operations.active) { applyWindowState(overlayWindow, store.getAll()); sizeOverlay(overlayWindow, store.getAll()); }
     overlayWindow.webContents.send('action:settings-changed', store.getAll());
   }
 }
@@ -201,7 +209,10 @@ function createOverlay() {
   win.webContents.setUserAgent(initialUA);
   const contentsId = win.webContents.id;
   win.on('closed', () => { debuggerIdentity.detach(); if (geminiContentsId === contentsId) geminiContentsId = null; });
-  for (const event of ['resize', 'move']) win.on(event, () => { if (!win.isDestroyed()) store.setBounds(win.getBounds()); });
+  // Persist position only. The overlay is non-resizable and sized solely by the
+  // settings slider, so OS resize events are ignored; otherwise a frameless
+  // window's bounds-rounding would ratchet the stored size larger on every move.
+  win.on('move', () => { if (!win.isDestroyed()) { const b = win.getBounds(); store.setBounds({ x: b.x, y: b.y }); } });
   win.on('close', event => { if (!quitting) { event.preventDefault(); exitApp(); } });
   win.on('closed', () => { operations.cancel(win); overlayWindow = null; loadedProvider = null; });
   win.webContents.on('did-navigate', (_event, url) => { if (geminiContentsId === win.webContents.id) geminiPageCommitted = isGeminiHost(url); });
@@ -241,7 +252,7 @@ export function launchGeminiOverlay() {
   currentMode = 'gemini';
   hideWindow(dashboardWindow);
   const settings = store.getAll();
-  win.setBounds(visibleBounds({ ...win.getBounds(), width: settings.windowWidth, height: settings.windowHeight }));
+  sizeOverlay(win, settings);
   restoreWindow(win, settings);
   if (loadedProvider !== settings.provider) {
     operations.cancel(win);
@@ -368,7 +379,7 @@ app.whenReady().then(() => {
   }
   try { register(); } catch (error) { shortcutStatus = { registered: [], failed: [{ error: error.message }] }; notify('Saved shortcuts are invalid. Reset shortcuts in the dashboard.'); }
   const recover = () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setBounds(visibleBounds(overlayWindow.getBounds()));
+    if (overlayWindow && !overlayWindow.isDestroyed()) { const s = store.getAll(); const b = overlayWindow.getBounds(); overlayWindow.setBounds(visibleBounds({ x: b.x, y: b.y, width: s.windowWidth, height: s.windowHeight })); }
   };
   screen.on('display-removed', recover); screen.on('display-metrics-changed', recover);
 });

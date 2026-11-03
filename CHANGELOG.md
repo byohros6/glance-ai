@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.14
+
+- Fix the overlay window growing larger each time it is moved or pushed against a screen edge; the window now keeps its set size.
+- Keep the signed-in Gemini reply fix from 1.2.12.
+
 ## 1.2.12
 
 - Fix Gemini replies stalling for one to two minutes when signed in.

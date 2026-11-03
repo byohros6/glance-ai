@@ -38,9 +38,12 @@ export function createShortcutHandlers(getMainWindow, onToggleDashboard, actions
     const win = getMainWindow();
     if (!win || win.isDestroyed()) return;
     const bounds = win.getBounds();
-    const next = visibleBounds({ ...bounds, x: bounds.x + dx, y: bounds.y + dy });
+    const settings = store.getAll();
+    // Moving changes position only. Use the stored size, never the live measured
+    // bounds, so repeated moves and edge clamps cannot inflate a frameless window.
+    const next = visibleBounds({ x: bounds.x + dx, y: bounds.y + dy, width: settings.windowWidth, height: settings.windowHeight });
     win.setBounds(next);
-    store.setBounds(next);
+    store.setBounds({ x: next.x, y: next.y });
   };
   const scroll = amount => {
     const win = getMainWindow();
