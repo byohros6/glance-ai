@@ -29,3 +29,6 @@ reports/
 *.pfx
 *.p12
 coverage/
+
+# Local spec workspaces
+.kiro/
