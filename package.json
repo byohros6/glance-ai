@@ -1,6 +1,6 @@
 {
   "name": "glance-ai",
-  "version": "1.2.12",
+  "version": "1.2.13",
   "description": "A lightweight, always-on-top workspace companion for AI assistants",
   "main": "src/main/main.js",
   "type": "module",
@@ -38,7 +38,7 @@
     "url": "https://github.com/byohros6/glance-ai.git"
   },
   "devDependencies": {
-    "electron": "44.3.0",
+    "electron": "44.10.1",
     "electron-builder": "26.15.3"
   },
   "build": {

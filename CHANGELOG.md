@@ -1,10 +1,10 @@
 # Changelog
 
-## 1.2.12
+## 1.2.13
 
 - Fix Gemini replies stalling for one to two minutes when signed in.
-- Present a standard Chrome browser identity to Gemini pages; the sign-in flow keeps its existing behavior.
-- Other providers are unchanged.
+- Present a standard Chrome browser identity to Gemini pages; the sign-in flow keeps its existing behavior, and other providers are unchanged.
+- Update the bundled Chromium runtime to Electron 44.10.1 for the latest security fixes. Version 1.2.12 was not published because its release check flagged the superseded runtime.
 
 ## 1.2.11
 
