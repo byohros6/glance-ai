@@ -18,6 +18,11 @@ const dashboardPath = path.join(directory, '../renderer/dashboard.html');
 const dashboardURL = pathToFileURL(dashboardPath).href;
 const preload = path.join(directory, '../preload/preload.cjs');
 app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+// Keep the overlay's page fully active when it is non-activating or occluded, so a
+// streaming provider reply never freezes on the thinking state after a focus toggle.
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 export const GOOGLE_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15';
 export const STANDARD_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
 const userAgent = STANDARD_USER_AGENT;
@@ -97,8 +102,8 @@ function notify(message) {
   const win = currentWindow();
   if (win && !win.isDestroyed()) win.webContents.send('action:show-toast', { message });
 }
-// The overlay is non-resizable so frameless bounds-rounding and edge clamps cannot
-// grow it. The settings slider is the only way to resize, so briefly allow it here.
+// Apply the size from the settings slider explicitly. The overlay never persists its
+// own measured size (see the move handler), so this is the only path that resizes it.
 function sizeOverlay(win, settings) {
   if (!win || win.isDestroyed()) return;
   const target = visibleBounds({ ...win.getBounds(), width: settings.windowWidth, height: settings.windowHeight });
@@ -201,7 +206,7 @@ function createDashboard() {
 }
 function createOverlay() {
   const settings = store.getAll();
-  const win = new BrowserWindow({ ...visibleBounds({ x: settings.x, y: settings.y, width: settings.windowWidth, height: settings.windowHeight }), show: false, frame: false, transparent: false, alwaysOnTop: true, skipTaskbar: true, focusable: settings.focusable, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: true } });
+  const win = new BrowserWindow({ ...visibleBounds({ x: settings.x, y: settings.y, width: settings.windowWidth, height: settings.windowHeight }), show: false, frame: false, transparent: false, alwaysOnTop: true, skipTaskbar: true, focusable: settings.focusable, backgroundColor: '#0d0f14', title: 'Glance AI', webPreferences: { preload, nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: true, backgroundThrottling: false } });
   overlayWindow = win;
   void disableWindowTransitions(win);
   secureWebContents(win.webContents);
